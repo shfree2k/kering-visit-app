@@ -422,14 +422,17 @@ textarea { resize: vertical; min-height: 64px; }
 
     <p class="section-title" style="margin-top:1.5rem;">공유 저장소 설정 (구글시트 연동)</p>
     <div class="card">
-      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:10px;">Apps Script 배포 후 발급된 웹 앱 URL을 입력하면, 이후 저장하는 방문 기록이 팀 공유 구글시트에도 자동 전송됩니다. 팀원 전체가 동일한 URL을 입력해야 같은 시트에 모입니다.</p>
+      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:10px;">Apps Script 배포 후 발급된 웹 앱 URL을 입력하면, 방문 기록과 목표 매장 설정이 팀 공유 구글시트에 자동 전송됩니다.</p>
       <div class="form-group" style="margin:0 0 10px 0;">
         <label class="form-label">웹 앱 URL</label>
         <input type="text" id="sync-url" placeholder="https://script.google.com/macros/s/..../exec" />
       </div>
-      <button class="btn btn-primary" onclick="saveSyncUrl()" style="margin-right:8px;"><i class="ti ti-device-floppy"></i> 저장</button>
-      <button class="btn" onclick="pullSharedVisits()"><i class="ti ti-refresh"></i> 팀 전체 기록 불러오기</button>
-      <p id="sync-status" style="font-size:12px;color:var(--text-secondary);margin-top:10px;"></p>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+        <button class="btn btn-primary" onclick="saveSyncUrl()"><i class="ti ti-device-floppy"></i> URL 저장</button>
+        <button class="btn btn-ghost" onclick="manualSyncGoals()"><i class="ti ti-target"></i> 목표 매장 업로드</button>
+        <button class="btn btn-ghost" onclick="pullSharedVisits()"><i class="ti ti-refresh"></i> 팀 전체 데이터 불러오기</button>
+      </div>
+      <div id="sync-status" style="font-size:12px;color:var(--text-secondary);padding:8px 10px;background:var(--surface-1);border-radius:var(--radius);display:none;"></div>
     </div>
   </div>
 </div>
@@ -839,7 +842,8 @@ function saveSyncUrl() {
   }
   localStorage.setItem('keco_sync_url', url);
   showToast(url ? '공유 저장소 URL이 저장되었습니다.' : '공유 저장소 연동이 해제되었습니다.');
-  document.getElementById('sync-status').textContent = '';
+  const el = document.getElementById('sync-status');
+  if(el) el.style.display = 'none';
 }
 
 function getSyncUrl() {
@@ -859,21 +863,46 @@ function syncVisitToSheet(visit) {
   }).catch(() => {});
 }
 
-function syncGoalsToSheet() {
+function setSyncStatus(msg, isError) {
+  const el = document.getElementById('sync-status');
+  if(!el) return;
+  el.style.display = 'block';
+  el.style.color = isError ? 'var(--text-danger)' : 'var(--text-secondary)';
+  el.textContent = msg;
+}
+
+function syncGoalsToSheet(silent) {
   const url = getSyncUrl();
   if(!url) return;
+  if(!silent) setSyncStatus('목표 매장 업로드 중...');
   fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
     body: JSON.stringify({ type: 'goals', goals: goals })
-  }).catch(() => {});
+  })
+  .then(res => res.json())
+  .then(data => {
+    if(data.result === 'success') {
+      if(!silent) { setSyncStatus('✓ 목표 매장이 구글시트에 저장되었습니다.'); showToast('목표 매장 동기화 완료'); }
+    } else {
+      setSyncStatus('목표 업로드 실패: ' + (data.message || '알 수 없는 오류'), true);
+    }
+  })
+  .catch(err => {
+    setSyncStatus('목표 업로드 실패: ' + err.message + ' — Code.gs가 최신 버전으로 재배포됐는지 확인해 주세요.', true);
+  });
+}
+
+function manualSyncGoals() {
+  const url = getSyncUrl();
+  if(!url) { showToast('먼저 웹 앱 URL을 저장해 주세요.'); return; }
+  syncGoalsToSheet(false);
 }
 
 function pullSharedVisits() {
   const url = getSyncUrl();
-  const status = document.getElementById('sync-status');
   if(!url) { showToast('먼저 웹 앱 URL을 저장해 주세요.'); return; }
-  status.textContent = '불러오는 중...';
+  setSyncStatus('서버에서 데이터 불러오는 중...');
   fetch(url)
     .then(res => res.json())
     .then(data => {
@@ -884,7 +913,6 @@ function pullSharedVisits() {
         Object.keys(data.goals).forEach(month => {
           if(!goals[month]) goals[month] = {};
           Object.keys(data.goals[month]).forEach(rid => {
-            // 서버 데이터로 덮어쓰기 (가장 최근 저장된 값이 기준)
             goals[month][rid] = data.goals[month][rid];
           });
         });
@@ -919,12 +947,13 @@ function pullSharedVisits() {
       });
       saveData();
       populateMonthSelects(); renderDashboard(); renderHistory();
-      status.textContent = `동기화 완료 — 방문 ${added}건 새로 가져옴 · 목표 설정 반영됨`;
+      const goalsLoaded = data.goals ? '· 목표 매장 반영됨' : '';
+      setSyncStatus(`✓ 동기화 완료 — 방문 ${added}건 새로 가져옴 ${goalsLoaded}`);
       showToast('팀 전체 데이터를 불러왔습니다.');
     })
     .catch(err => {
-      status.textContent = '불러오기 실패: ' + err.message;
-      showToast('동기화에 실패했습니다. URL을 확인해 주세요.');
+      setSyncStatus('불러오기 실패: ' + err.message + ' — Code.gs가 최신 버전으로 재배포됐는지 확인해 주세요.', true);
+      showToast('동기화에 실패했습니다.');
     });
 }
 
