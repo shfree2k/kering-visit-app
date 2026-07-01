@@ -1,0 +1,24 @@
+{
+  "name": "케어링아이웨어코리아 매장방문 관리",
+  "short_name": "매장방문",
+  "description": "Kering Eyewear Korea 매장 방문 기록 및 목표 관리",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0f0f1a",
+  "theme_color": "#C9A84C",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

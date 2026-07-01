@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>케어링아이웨어코리아 - 매장 방문 관리</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css" />
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#C9A84C" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="매장방문" />
+<link rel="apple-touch-icon" href="icon-192.png" />
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --surface-0: #f4f2eb; --surface-1: #f0ede5; --surface-2: #fff;
+  --text-primary: #1a1a18; --text-secondary: #5f5e5a; --text-muted: #888780;
+  --text-accent: #185fa5; --border: rgba(0,0,0,0.12); --border-strong: rgba(0,0,0,0.2);
+  --border-accent: #378add; --bg-accent: #e6f1fb; --fill-accent: #378add;
+  --fill-accent-hover: #185fa5; --on-accent: #fff;
+  --bg-success: #eaf3de; --text-success: #3b6d11;
+  --bg-warning: #faeeda; --text-warning: #854f0b;
+  --bg-danger: #fcebeb; --text-danger: #a32d2d;
+  --fill-success: #639922; --fill-warning: #ba7517; --fill-danger: #e24b4a;
+  --bg-purple: #eeedfe; --text-purple: #3c3489; --border-purple: #7f77dd;
+  --radius: 8px; --font-sans: system-ui, -apple-system, sans-serif;
+}
+body { font-family: var(--font-sans); background: var(--surface-0); color: var(--text-primary); min-height: 100vh; }
+.container { max-width: 780px; margin: 0 auto; padding: 1.5rem 1rem 3rem; }
+.app-header { margin-bottom: 1.5rem; }
+.app-header h1 { font-size: 19px; font-weight: 500; }
+.app-header p { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+.tab-bar { display: flex; gap: 2px; border-bottom: 0.5px solid var(--border); margin-bottom: 1.5rem; overflow-x: auto; }
+.tab { padding: 9px 14px; font-size: 13px; color: var(--text-secondary); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; background: none; border-top: none; border-left: none; border-right: none; white-space: nowrap; font-family: var(--font-sans); }
+.tab.active { color: var(--text-accent); border-bottom-color: var(--border-accent); font-weight: 500; }
+.tab:hover:not(.active) { color: var(--text-primary); }
+.section { display: none; }
+.section.active { display: block; }
+.card { background: var(--surface-2); border: 0.5px solid var(--border); border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: 12px; }
+.metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 1.5rem; }
+.metric { background: var(--surface-1); border-radius: var(--radius); padding: 1rem; }
+.metric-label { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
+.metric-value { font-size: 22px; font-weight: 500; }
+.metric-sub { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+.rep-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.rep-card { background: var(--surface-2); border: 0.5px solid var(--border); border-radius: 12px; padding: 1rem 1.25rem; }
+.rep-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+.avatar { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 500; flex-shrink: 0; }
+.rep-name { font-size: 14px; font-weight: 500; }
+.badge { display: inline-block; padding: 2px 8px; border-radius: var(--radius); font-size: 11px; font-weight: 500; }
+.badge-success { background: var(--bg-success); color: var(--text-success); }
+.badge-warning { background: var(--bg-warning); color: var(--text-warning); }
+.badge-danger { background: var(--bg-danger); color: var(--text-danger); }
+.progress-row { display: flex; align-items: center; gap: 8px; }
+.progress-bar { flex: 1; height: 6px; background: var(--surface-0); border-radius: 99px; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 99px; transition: width 0.3s; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+.form-group { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+.form-label { font-size: 12px; color: var(--text-secondary); font-weight: 500; }
+select, input[type="text"], input[type="number"], input[type="date"], textarea {
+  width: 100%; padding: 8px 10px; border: 0.5px solid var(--border-strong);
+  border-radius: var(--radius); background: var(--surface-2); color: var(--text-primary);
+  font-size: 14px; font-family: var(--font-sans);
+}
+textarea { resize: vertical; min-height: 60px; }
+.btn { padding: 8px 16px; border-radius: var(--radius); font-size: 14px; cursor: pointer; font-family: var(--font-sans); display: inline-flex; align-items: center; gap: 6px; }
+.btn-primary { background: var(--fill-accent); color: var(--on-accent); border: none; }
+.btn-primary:hover { background: var(--fill-accent-hover); }
+.btn-ghost { background: none; border: 0.5px solid var(--border-strong); color: var(--text-primary); }
+.btn-ghost:hover { background: var(--surface-1); }
+.btn-sm { padding: 5px 10px; font-size: 12px; }
+.section-title { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
+.tag { display: inline-block; padding: 2px 8px; border-radius: var(--radius); font-size: 11px; background: var(--surface-1); color: var(--text-secondary); border: 0.5px solid var(--border); margin-right: 4px; margin-bottom: 4px; }
+.checklist { display: flex; flex-direction: column; gap: 8px; }
+.check-item { display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; }
+.check-item input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--fill-accent); flex-shrink: 0; }
+.subsection-label { font-size: 13px; font-weight: 500; color: var(--text-primary); margin: 14px 0 8px; display: flex; align-items: center; gap: 6px; }
+.subsection-label:first-child { margin-top: 0; }
+.divider { border-top: 0.5px solid var(--border); margin: 16px 0; }
+
+/* 사진 업로드 */
+.photo-btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 4px; }
+.photo-btn { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 18px 12px; border-radius: 12px; border: 1.5px dashed var(--border-strong); background: var(--surface-2); cursor: pointer; transition: border-color 0.15s, background 0.15s; overflow: hidden; }
+.photo-btn:hover { border-color: var(--border-accent); background: var(--bg-accent); }
+.photo-btn input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+.photo-btn-icon { font-size: 26px; color: var(--text-accent); line-height: 1; }
+.photo-btn-label { font-size: 13px; font-weight: 500; color: var(--text-primary); }
+.photo-btn-sub { font-size: 11px; color: var(--text-muted); }
+.photo-count-info { font-size: 11px; color: var(--text-muted); text-align: right; margin-top: 4px; }
+.photo-preview-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 8px; margin-top: 12px; }
+.photo-thumb { position: relative; aspect-ratio: 1; border-radius: var(--radius); overflow: hidden; border: 0.5px solid var(--border); }
+.photo-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.photo-thumb-del { position: absolute; top: 3px; right: 3px; background: rgba(0,0,0,0.55); border: none; border-radius: 50%; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #fff; font-size: 10px; padding: 0; }
+
+/* 경쟁사 입력 카드 */
+.competitor-block { background: var(--surface-1); border-radius: var(--radius); padding: 12px; margin-bottom: 10px; }
+.competitor-block-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.competitor-pill { font-size: 12px; font-weight: 500; padding: 2px 9px; border-radius: 99px; }
+.cp-look { background: var(--bg-warning); color: var(--text-warning); }
+.cp-lux { background: var(--bg-danger); color: var(--text-danger); }
+.cp-dk { background: var(--bg-purple); color: var(--text-purple); }
+.cp-brand { background: var(--bg-accent); color: var(--text-accent); }
+
+/* 방문 내역 카드 */
+.visit-card { background: var(--surface-2); border: 0.5px solid var(--border); border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: 10px; }
+.visit-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap; }
+.visit-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 6px; margin-top: 10px; }
+.gallery-thumb { aspect-ratio: 1; border-radius: var(--radius); overflow: hidden; cursor: pointer; border: 0.5px solid var(--border); }
+.gallery-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; transition: opacity 0.15s; }
+.gallery-thumb:hover img { opacity: 0.85; }
+.photo-badge { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; color: var(--text-accent); background: var(--bg-accent); border-radius: var(--radius); padding: 2px 7px; }
+.issue-badge { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; color: var(--text-danger); background: var(--bg-danger); border-radius: var(--radius); padding: 2px 7px; }
+.detail-block { margin-top: 8px; margin-left: 16px; padding: 8px 10px; background: var(--surface-1); border-radius: var(--radius); font-size: 12px; color: var(--text-secondary); }
+.detail-block-title { font-size: 12px; font-weight: 500; color: var(--text-primary); margin-bottom: 4px; }
+.collapse-toggle { font-size: 12px; color: var(--text-accent); cursor: pointer; margin-left: 16px; margin-top: 6px; display: inline-block; }
+
+/* 라이트박스 */
+.lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 999; align-items: center; justify-content: center; padding: 1rem; }
+.lightbox.open { display: flex; }
+.lightbox-inner { position: relative; max-width: min(92vw, 700px); }
+.lightbox-inner img { max-width: 100%; max-height: 85vh; border-radius: 8px; display: block; }
+.lightbox-close { position: absolute; top: -14px; right: -14px; background: var(--surface-2); border: 0.5px solid var(--border); border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 18px; }
+.lightbox-nav { display: flex; gap: 8px; justify-content: center; margin-top: 10px; }
+.lightbox-nav button { background: rgba(255,255,255,0.15); border: 0.5px solid rgba(255,255,255,0.3); border-radius: var(--radius); padding: 4px 14px; color: #fff; cursor: pointer; font-size: 13px; font-family: var(--font-sans); }
+.lightbox-caption { text-align: center; margin-top: 8px; font-size: 12px; color: rgba(255,255,255,0.65); }
+
+.toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--text-primary); color: #fff; border-radius: var(--radius); padding: 10px 18px; font-size: 13px; display: none; z-index: 1000; white-space: nowrap; }
+.goal-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.filter-bar { display: flex; gap: 8px; margin-bottom: 1rem; flex-wrap: wrap; align-items: center; }
+.filter-bar select { width: auto; padding: 5px 8px; font-size: 13px; }
+.brand-chip-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.source-note { font-size: 11px; color: var(--text-muted); margin-top: 1.5rem; line-height: 1.6; border-top: 0.5px solid var(--border); padding-top: 12px; }
+
+@media (max-width: 500px) {
+  .form-row { grid-template-columns: 1fr; }
+  .rep-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="app-header">
+    <h1>케어링아이웨어코리아 · 매장 방문 관리</h1>
+    <p>백화점·면세점 선글라스 매장 — VM 점검 · 매니저 면담 · 경쟁사 동향 · 방문 목표 관리</p>
+    <button id="pwa-install-btn" onclick="installPWA()" style="display:none;margin-top:10px;padding:7px 16px;background:var(--accent);color:#1a1a2e;border:none;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font-sans);">
+      <i class="ti ti-download"></i> 앱으로 설치하기
+    </button>
+  </div>
+
+  <div class="tab-bar">
+    <button class="tab active" onclick="showTab('dashboard')"><i class="ti ti-layout-dashboard"></i> 대시보드</button>
+    <button class="tab" onclick="showTab('visit')"><i class="ti ti-plus"></i> 방문 기록</button>
+    <button class="tab" onclick="showTab('history')"><i class="ti ti-list"></i> 방문 내역</button>
+    <button class="tab" onclick="showTab('guide')"><i class="ti ti-book"></i> 매뉴얼</button>
+  </div>
+
+  <!-- 대시보드 -->
+  <div class="section active" id="tab-dashboard">
+    <div class="metric-grid" id="summary-metrics"></div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:1rem;flex-wrap:wrap;">
+      <p class="section-title" style="margin:0;">월간 목표 현황</p>
+      <select id="dash-month" onchange="renderDashboard()" style="width:auto;padding:5px 8px;font-size:13px;"></select>
+      <button class="btn btn-ghost btn-sm" onclick="showTab('visit')"><i class="ti ti-plus"></i> 방문 추가</button>
+    </div>
+    <div class="rep-grid" id="rep-cards"></div>
+  </div>
+
+  <!-- 방문 기록 -->
+  <div class="section" id="tab-visit">
+    <p class="section-title">매장 방문 기록</p>
+    <div class="card">
+      <div class="form-row">
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">담당 영업사원</label>
+          <select id="v-rep"></select>
+        </div>
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">방문 날짜</label>
+          <input type="date" id="v-date" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">매장구분</label>
+          <select id="v-channel" onchange="onChannelChange()">
+            <option value="DS">DS (백화점)</option>
+            <option value="TR">TR (면세점)</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">매장명</label>
+          <select id="v-store"></select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">방문 유형</label>
+        <select id="v-type">
+          <option>정기 방문</option>
+          <option>긴급 방문 (이슈 대응)</option>
+          <option>신규 매니저 면담</option>
+          <option>시즌 행사/VMD 교체 지원</option>
+          <option>재고 실사</option>
+        </select>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- 1. VM/진열 점검 -->
+      <div class="subsection-label"><i class="ti ti-layout-grid" style="color:var(--text-accent);"></i>① 매장 진열(VM) 점검</div>
+      <div class="checklist" id="checklist-vm">
+        <label class="check-item"><input type="checkbox" value="쇼윈도/디스플레이 가이드라인 준수" /> 쇼윈도·디스플레이 가이드라인 준수 여부</label>
+        <label class="check-item"><input type="checkbox" value="신상품 진열 반영" /> 신상품(신규 입고) 진열 반영 여부</label>
+        <label class="check-item"><input type="checkbox" value="베스트셀러 우선 진열" /> 베스트셀러 품목 우선 진열 위치</label>
+        <label class="check-item"><input type="checkbox" value="POP/가격표 부착 상태" /> POP물·가격표 부착 상태</label>
+        <label class="check-item"><input type="checkbox" value="제품 청결/스크래치 점검" /> 진열 제품 청결도·스크래치 점검</label>
+        <label class="check-item"><input type="checkbox" value="재고 수량 확인" /> 매장 내 재고(SKU별) 수량 확인</label>
+      </div>
+
+      <div class="subsection-label"><i class="ti ti-camera" style="color:var(--text-accent);"></i>매장 진열 사진</div>
+      <div class="photo-btn-row">
+        <div class="photo-btn">
+          <input type="file" id="photo-gallery" accept="image/*" multiple onchange="onFileSelect(event)" />
+          <div class="photo-btn-icon"><i class="ti ti-photo"></i></div>
+          <div class="photo-btn-label">사진첩에서 선택</div>
+          <div class="photo-btn-sub">여러 장 동시 선택 가능</div>
+        </div>
+        <div class="photo-btn">
+          <input type="file" id="photo-camera" accept="image/*" capture="environment" onchange="onFileSelect(event)" />
+          <div class="photo-btn-icon"><i class="ti ti-camera"></i></div>
+          <div class="photo-btn-label">직접 촬영</div>
+          <div class="photo-btn-sub">카메라 바로 열기</div>
+        </div>
+      </div>
+      <div class="photo-count-info" id="photo-count-info">최대 10장 · 쇼윈도 전경 · 진열대 · 이슈 구역 클로즈업</div>
+      <div class="photo-preview-grid" id="preview-grid"></div>
+
+      <div class="divider"></div>
+
+      <!-- 2. 매니저 면담 -->
+      <div class="subsection-label"><i class="ti ti-users" style="color:var(--text-accent);"></i>② 매니저 면담</div>
+      <div class="form-group">
+        <label class="form-label">매장 이슈사항 (재고 부족, 시설, 인력 등)</label>
+        <textarea id="v-issue" placeholder="예: SAINT LAURENT SL509 골드 프레임 재고 소진, 추가 발주 필요"></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">필요 조치사항 / 본사 전달 필요 건</label>
+        <textarea id="v-action" placeholder="예: 시즌 신상 POP 교체 필요, 직원 교육 일정 조율 필요"></textarea>
+      </div>
+      <label class="check-item" style="margin-bottom:12px;">
+        <input type="checkbox" id="v-urgent" />
+        <span style="color:var(--text-danger);font-weight:500;">긴급 이슈 — 팀장 즉시 보고 필요</span>
+      </label>
+
+      <div class="divider"></div>
+
+      <!-- 3. 경쟁사 동향 -->
+      <div class="subsection-label"><i class="ti ti-binoculars" style="color:var(--text-accent);"></i>③ 경쟁사 매장 운영 현황</div>
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">같은 층/인근 경쟁 매장의 운영 현황(인력, VMD, 프로모션 등)을 기록하세요.</p>
+
+      <div class="competitor-block">
+        <div class="competitor-block-header"><span class="competitor-pill cp-look">LOOK (룩옵티칼)</span></div>
+        <textarea id="cp-look-note" placeholder="매장 운영 현황, VMD 변화, 프로모션 등" style="min-height:44px;"></textarea>
+      </div>
+
+      <div class="competitor-block">
+        <div class="competitor-block-header"><span class="competitor-pill cp-lux">LUXOTTICA (레이밴·오클리·프라다 등)</span></div>
+        <textarea id="cp-lux-note" placeholder="매장 운영 현황, VMD 변화, 프로모션 등" style="min-height:44px;"></textarea>
+      </div>
+
+      <div class="competitor-block">
+        <div class="competitor-block-header"><span class="competitor-pill cp-dk">DK 아이웨어그룹</span></div>
+        <textarea id="cp-dk-note" placeholder="매장 운영 현황, VMD 변화, 프로모션 등" style="min-height:44px;"></textarea>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- 4. 경쟁 브랜드 베스트상품 -->
+      <div class="subsection-label"><i class="ti ti-tag" style="color:var(--text-accent);"></i>④ 경쟁 브랜드 베스트상품 품번·가격</div>
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">동일 채널 내 경쟁 브랜드의 베스트셀러 품번과 가격을 기록하세요.</p>
+
+      <div class="competitor-block">
+        <div class="competitor-block-header"><span class="competitor-pill cp-brand">DIOR</span></div>
+        <div class="form-row" style="margin-bottom:0;">
+          <input type="text" id="bp-dior-product" placeholder="베스트 품번 (예: CD40097U)" />
+          <input type="text" id="bp-dior-price" placeholder="가격 (예: 550,000)" inputmode="numeric" oninput="formatPriceInput(this)" />
+        </div>
+      </div>
+
+      <div class="competitor-block">
+        <div class="competitor-block-header"><span class="competitor-pill cp-brand">CELINE</span></div>
+        <div class="form-row" style="margin-bottom:0;">
+          <input type="text" id="bp-celine-product" placeholder="베스트 품번" />
+          <input type="text" id="bp-celine-price" placeholder="가격" inputmode="numeric" oninput="formatPriceInput(this)" />
+        </div>
+      </div>
+
+      <div class="competitor-block">
+        <div class="competitor-block-header"><span class="competitor-pill cp-brand">FERRAGAMO</span></div>
+        <div class="form-row" style="margin-bottom:0;">
+          <input type="text" id="bp-ferragamo-product" placeholder="베스트 품번" />
+          <input type="text" id="bp-ferragamo-price" placeholder="가격" inputmode="numeric" oninput="formatPriceInput(this)" />
+        </div>
+      </div>
+
+      <div class="competitor-block">
+        <div class="competitor-block-header"><span class="competitor-pill cp-brand">MIUMIU</span></div>
+        <div class="form-row" style="margin-bottom:0;">
+          <input type="text" id="bp-miumiu-product" placeholder="베스트 품번" />
+          <input type="text" id="bp-miumiu-price" placeholder="가격" inputmode="numeric" oninput="formatPriceInput(this)" />
+        </div>
+      </div>
+
+      <div class="competitor-block">
+        <div class="competitor-block-header"><span class="competitor-pill cp-brand">TOM FORD</span></div>
+        <div class="form-row" style="margin-bottom:0;">
+          <input type="text" id="bp-tomford-product" placeholder="베스트 품번" />
+          <input type="text" id="bp-tomford-price" placeholder="가격" inputmode="numeric" oninput="formatPriceInput(this)" />
+        </div>
+      </div>
+
+      <div class="divider"></div>
+      <button class="btn btn-primary" onclick="addVisit()"><i class="ti ti-check"></i> 방문 기록 저장</button>
+    </div>
+  </div>
+
+  <!-- 방문 내역 -->
+  <div class="section" id="tab-history">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:1rem;">
+      <p class="section-title" style="margin:0;">방문 내역</p>
+      <button class="btn btn-primary btn-sm" onclick="exportToExcel()"><i class="ti ti-file-spreadsheet"></i> 엑셀로 내보내기</button>
+    </div>
+    <div class="filter-bar">
+      <select id="filter-rep" onchange="renderHistory()"><option value="">전체 사원</option></select>
+      <select id="filter-month" onchange="renderHistory()"></select>
+      <label style="display:flex;align-items:center;gap:5px;font-size:13px;color:var(--text-secondary);cursor:pointer;">
+        <input type="checkbox" id="filter-urgent" onchange="renderHistory()" style="width:14px;height:14px;accent-color:var(--fill-accent);" />
+        긴급 이슈만
+      </label>
+    </div>
+    <div id="history-list"></div>
+  </div>
+
+  <!-- 매뉴얼 -->
+  <div class="section" id="tab-guide">
+    <p class="section-title">매장 방문 매뉴얼</p>
+
+    <div class="card">
+      <p style="font-size:14px;font-weight:500;margin-bottom:10px;"><i class="ti ti-clock" style="color:var(--text-accent);margin-right:6px;"></i>방문 전 준비</p>
+      <div style="font-size:13px;color:var(--text-secondary);line-height:1.9;">
+        <div>① 전회 방문 기록·미해결 이슈 확인</div>
+        <div>② 시즌 신상품·VMD 가이드라인 최신본 확인</div>
+        <div>③ 해당 매장 재고 현황 사전 파악 (시스템 조회)</div>
+        <div>④ 동일 층 경쟁 매장(LOOK/LUXOTTICA/DK) 위치 확인</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <p style="font-size:14px;font-weight:500;margin-bottom:10px;"><i class="ti ti-layout-grid" style="color:var(--text-accent);margin-right:6px;"></i>① 매장 진열(VM) 점검</p>
+      <div style="font-size:13px;color:var(--text-secondary);line-height:1.9;">
+        · 본사 VM 가이드라인 대비 쇼윈도·진열 준수 여부 확인<br>
+        · 신상품 입고 반영 및 베스트셀러 우선 배치 점검<br>
+        · 가격표·POP 부착 상태, 제품 청결도·스크래치 확인<br>
+        · 쇼윈도 전경, 진열대, 이슈 구역은 사진으로 반드시 기록
+      </div>
+    </div>
+
+    <div class="card">
+      <p style="font-size:14px;font-weight:500;margin-bottom:10px;"><i class="ti ti-users" style="color:var(--text-accent);margin-right:6px;"></i>② 매니저 면담</p>
+      <div style="font-size:13px;color:var(--text-secondary);line-height:1.9;">
+        · 재고 부족, 시설 문제, 인력 이슈 등 매장 운영 애로사항 청취<br>
+        · 발주 필요 품목, POP/디스플레이 교체 요청 등 본사 전달 필요 사항 정리<br>
+        · 긴급 이슈는 즉시 팀장 보고 (긴급 이슈 체크박스 활용)
+      </div>
+    </div>
+
+    <div class="card">
+      <p style="font-size:14px;font-weight:500;margin-bottom:10px;"><i class="ti ti-binoculars" style="color:var(--text-accent);margin-right:6px;"></i>③ 경쟁사 동향 파악</p>
+      <div style="font-size:13px;color:var(--text-secondary);line-height:1.9;">
+        · LOOK, LUXOTTICA, DK 매장 운영 현황(인력, 진열 변화, 프로모션) 관찰<br>
+        · 베스트셀러 품번과 가격대 기록 (가능한 한 정확한 모델명 확인)
+      </div>
+    </div>
+
+    <div class="card">
+      <p style="font-size:14px;font-weight:500;margin-bottom:10px;"><i class="ti ti-clipboard-check" style="color:var(--text-accent);margin-right:6px;"></i>방문 후 처리</p>
+      <div style="font-size:13px;color:var(--text-secondary);line-height:1.9;">
+        <div>① 앱에 방문 기록·사진·경쟁사 정보 당일 입력</div>
+        <div>② 발주 필요 건 → 물류/MD팀 전달</div>
+        <div>③ 긴급 이슈 매장 → 팀장 별도 보고</div>
+        <div>④ 경쟁사 동향 → 주간 회의 시 공유</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <p style="font-size:14px;font-weight:500;margin-bottom:10px;"><i class="ti ti-target" style="color:var(--text-accent);margin-right:6px;"></i>월간 목표 관리 원칙</p>
+      <div style="font-size:13px;color:var(--text-secondary);line-height:1.9;">
+        <div>· 월초: 본인 목표 방문 횟수 설정 (담당 매장 전체 순회 기준)</div>
+        <div>· 월중: 주 1회 달성률 점검, 미방문 매장 우선순위 조정</div>
+        <div>· 월말: 긴급 이슈 매장 재방문으로 목표 마감</div>
+        <div>· 면세점·백화점 채널 균형 있게 방문 배분</div>
+      </div>
+    </div>
+
+    <p class="section-title" style="margin-top:1.5rem;">월별 방문 목표 설정</p>
+    <div class="card" id="goal-settings"></div>
+
+    <p class="section-title" style="margin-top:1.5rem;">공유 저장소 설정 (구글시트 연동)</p>
+    <div class="card">
+      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:10px;">Apps Script 배포 후 발급된 웹 앱 URL을 입력하면, 이후 저장하는 방문 기록이 팀 공유 구글시트에도 자동 전송됩니다. 팀원 전체가 동일한 URL을 입력해야 같은 시트에 모입니다.</p>
+      <div class="form-group" style="margin:0 0 10px 0;">
+        <label class="form-label">웹 앱 URL</label>
+        <input type="text" id="sync-url" placeholder="https://script.google.com/macros/s/..../exec" />
+      </div>
+      <button class="btn btn-primary" onclick="saveSyncUrl()" style="margin-right:8px;"><i class="ti ti-device-floppy"></i> 저장</button>
+      <button class="btn" onclick="pullSharedVisits()"><i class="ti ti-refresh"></i> 팀 전체 기록 불러오기</button>
+      <p id="sync-status" style="font-size:12px;color:var(--text-secondary);margin-top:10px;"></p>
+    </div>
+  </div>
+</div>
+
+<!-- 라이트박스 -->
+<div class="lightbox" id="lightbox" onclick="closeLightboxBg(event)">
+  <div class="lightbox-inner">
+    <button class="lightbox-close" onclick="closeLightbox()" aria-label="닫기"><i class="ti ti-x"></i></button>
+    <img id="lightbox-img" src="" alt="" />
+    <div class="lightbox-nav" id="lightbox-nav"></div>
+    <div class="lightbox-caption" id="lightbox-caption"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const STORES = {
+  DS: ["DS LOTTE BUSAN","DS LOTTE INCHEON","DS LOTTE JAMSIL","DS LOTTE CHANGWON","DS LOTTE MAIN","DS LOTTE DONGTAN","DS SHINSEGAE GANGNAM","DS SHINSEGAE DAEGU","DS SHINSEGAE SOUTHCITY","DS SHINSEGAE CENTUMCITY","DS SHINSEGAE GWANGJU","DS SHINSEGAE GIMHAE","DS SHINSEGAE DAEJEON","DS SHINSEGAE TIMESQUARE","DS SHINSEGAE UIJEONGBU","DS SHINSEGAE HANAM","DS SHINSEGAE MAIN","DS SHINSEGAE CHEONAN","DS HYUNDAI SEOUL","DS HYUNDAI KINTEX","DS HYUNDAI DAEGU","DS HYUNDAI ULSAN","DS HYUNDAI JUNGDONG","DS HYUNDAI PANGYO","DS HYUNDAI MAIN","DS HYUNDAI MOKDONG","DS HYUNDAI CHEONHO","DS AK SUWON","DS GALLERIA GWANGGYO","DS GALLERIA CHEONAN","DS IPARK"],
+  TR: ["TR SHILLA HDC","TR HYUNDAI COEX","TR HYUNDAI INCHEON T1","TR JDC","TR LOTTE BUSAN","TR LOTTE GIMHAE","TR LOTTE GIMPO","TR LOTTE JEJU","TR LOTTE MAIN","TR LOTTE WORLD TOWER","TR SHILLA INCHEON T1","TR SHILLA INCHEON T2","TR SHILLA JEJU","TR SHILLA MAIN","TR SHINSEGAE C. MAIN","TR SHINSEGAE INCHEON T1","TR SHINSEGAE INCHEON T2 W","TR SHINSEGAE MAIN"]
+};
+
+function onChannelChange() {
+  const channel = document.getElementById('v-channel').value;
+  const storeSel = document.getElementById('v-store');
+  storeSel.innerHTML = STORES[channel].map(s=>`<option value="${s}">${s}</option>`).join('');
+}
+
+const DEFAULT_REPS = [
+  { id: 1, name: "Charco", initials: "Ch", color: "#B5D4F4", textColor: "#0C447C" },
+  { id: 2, name: "Roy", initials: "Ro", color: "#9FE1CB", textColor: "#085041" },
+  { id: 3, name: "Jessie", initials: "Je", color: "#FAC775", textColor: "#633806" },
+  { id: 4, name: "Lisa", initials: "Li", color: "#F4C0D1", textColor: "#72243E" },
+  { id: 5, name: "Anna", initials: "An", color: "#CECBF6", textColor: "#3C3489" },
+  { id: 6, name: "Chany", initials: "Cy", color: "#FFD9A0", textColor: "#7A4A00" },
+];
+const COLOR_PALETTE = [
+  { color: "#B5D4F4", textColor: "#0C447C" },
+  { color: "#9FE1CB", textColor: "#085041" },
+  { color: "#FAC775", textColor: "#633806" },
+  { color: "#F4C0D1", textColor: "#72243E" },
+  { color: "#CECBF6", textColor: "#3C3489" },
+  { color: "#F0997B", textColor: "#712B13" },
+  { color: "#97C459", textColor: "#27500A" },
+  { color: "#F09595", textColor: "#791F1F" },
+];
+
+let REPS = [];
+try { REPS = JSON.parse(localStorage.getItem('keco_reps') || 'null') || JSON.parse(JSON.stringify(DEFAULT_REPS)); } catch(e){ REPS = JSON.parse(JSON.stringify(DEFAULT_REPS)); }
+function saveReps() { try { localStorage.setItem('keco_reps', JSON.stringify(REPS)); } catch(e){} }
+
+let visits = [], goals = {};
+try { visits = JSON.parse(localStorage.getItem('keco_visits') || '[]'); } catch(e){}
+try { goals = JSON.parse(localStorage.getItem('keco_goals') || '{}'); } catch(e){}
+
+let pendingPhotos = [];
+let lbVisitId = null, lbPhotoIdx = 0;
+
+const now = new Date();
+const thisMonth = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+const todayStr = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
+
+function saveData() {
+  try { localStorage.setItem('keco_visits', JSON.stringify(visits)); } catch(e){ showToast('저장 공간 부족 — 일부 사진이 저장 안 될 수 있습니다.'); }
+  try { localStorage.setItem('keco_goals', JSON.stringify(goals)); } catch(e){}
+}
+
+function getMonths() {
+  const s = new Set([thisMonth]);
+  visits.forEach(v => { if(v.date) s.add(v.date.slice(0,7)); });
+  return Array.from(s).sort().reverse();
+}
+
+function populateMonthSelects() {
+  const months = getMonths();
+  ['dash-month','filter-month'].forEach(id => {
+    const el = document.getElementById(id); if(!el) return;
+    const cur = el.value || thisMonth;
+    el.innerHTML = months.map(m => `<option value="${m}"${m===cur?' selected':''}>${m}</option>`).join('');
+  });
+}
+
+function getGoal(rid, m) { return (goals[m]&&goals[m][rid]) ? goals[m][rid] : 15; }
+function setGoal(rid, m, v) { if(!goals[m]) goals[m]={}; goals[m][rid]=parseInt(v)||0; saveData(); }
+function repVisitsInMonth(rid, m) { return visits.filter(v => v.repId===rid && v.date && v.date.slice(0,7)===m); }
+
+function statusBadge(pct) {
+  if(pct>=100) return '<span class="badge badge-success">달성</span>';
+  if(pct>=60)  return '<span class="badge badge-warning">진행중</span>';
+  return '<span class="badge badge-danger">미달</span>';
+}
+
+function renderDashboard() {
+  const month = document.getElementById('dash-month').value || thisMonth;
+  let tv=0, tg=0, done=0, tp=0, urgent=0;
+  REPS.forEach(r => {
+    const rv = repVisitsInMonth(r.id, month);
+    tv += rv.length; tg += getGoal(r.id, month);
+    if(rv.length >= getGoal(r.id, month)) done++;
+    rv.forEach(v => { tp += (v.photos?v.photos.length:0); if(v.urgent) urgent++; });
+  });
+  document.getElementById('summary-metrics').innerHTML = `
+    <div class="metric"><div class="metric-label">총 방문</div><div class="metric-value">${tv}</div><div class="metric-sub">목표 ${tg}회</div></div>
+    <div class="metric"><div class="metric-label">전체 달성률</div><div class="metric-value">${tg>0?Math.round(tv/tg*100):0}%</div><div class="metric-sub">${month}</div></div>
+    <div class="metric"><div class="metric-label">목표 달성 사원</div><div class="metric-value">${done}명</div><div class="metric-sub">전체 ${REPS.length}명</div></div>
+    <div class="metric"><div class="metric-label">긴급 이슈</div><div class="metric-value" style="color:${urgent>0?'var(--text-danger)':'inherit'}">${urgent}건</div><div class="metric-sub">이번 달</div></div>
+  `;
+  document.getElementById('rep-cards').innerHTML = REPS.map(r => {
+    const rv = repVisitsInMonth(r.id, month);
+    const cnt = rv.length, goal = getGoal(r.id, month);
+    const pct = goal>0 ? Math.min(100, Math.round(cnt/goal*100)) : 0;
+    const pc = rv.reduce((s,v)=>s+(v.photos?v.photos.length:0),0);
+    const uc = rv.filter(v=>v.urgent).length;
+    const fc = pct>=100?'var(--fill-success)':pct>=60?'var(--fill-warning)':'var(--fill-danger)';
+    return `<div class="rep-card">
+      <div class="rep-header">
+        <div class="avatar" style="background:${r.color};color:${r.textColor}">${r.initials}</div>
+        <div><div class="rep-name">${r.name}</div></div>
+        ${statusBadge(pct)}
+      </div>
+      <div class="progress-row">
+        <div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:${fc}"></div></div>
+        <span style="font-size:12px;font-weight:500;min-width:42px;text-align:right;">${cnt}/${goal}회</span>
+      </div>
+      <div style="margin-top:6px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <span style="font-size:12px;color:var(--text-muted);">${pct}% 달성</span>
+        ${pc>0?`<span class="photo-badge"><i class="ti ti-camera" style="font-size:11px;"></i>${pc}장</span>`:''}
+        ${uc>0?`<span class="issue-badge"><i class="ti ti-alert-triangle" style="font-size:11px;"></i>${uc}건</span>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function onFileSelect(e) { processFiles(Array.from(e.target.files)); e.target.value=''; }
+
+function formatPriceInput(input) {
+  const raw = input.value.replace(/[^0-9]/g, '');
+  const distFromEnd = input.value.length - input.selectionEnd;
+  if(!raw) { input.value = ''; return; }
+  const formatted = Number(raw).toLocaleString('ko-KR');
+  input.value = formatted;
+  const newPos = Math.max(0, formatted.length - distFromEnd);
+  input.setSelectionRange(newPos, newPos);
+}
+function processFiles(files) {
+  const imgs = files.filter(f=>f.type.startsWith('image/'));
+  if(!imgs.length) return;
+  const rem = 10 - pendingPhotos.length;
+  if(rem<=0) { showToast('사진은 최대 10장까지 가능합니다.'); return; }
+  const toAdd = imgs.slice(0, rem);
+  if(imgs.length>rem) showToast(`최대 10장까지 가능합니다. ${toAdd.length}장만 추가됩니다.`);
+  toAdd.forEach(f => {
+    const r = new FileReader();
+    r.onload = e => { pendingPhotos.push({ dataUrl: e.target.result, name: f.name }); renderPreview(); };
+    r.readAsDataURL(f);
+  });
+}
+function renderPreview() {
+  const g = document.getElementById('preview-grid');
+  const info = document.getElementById('photo-count-info');
+  if(!pendingPhotos.length) {
+    g.innerHTML='';
+    info.textContent = '최대 10장 · 쇼윈도 전경 · 진열대 · 이슈 구역 클로즈업';
+    return;
+  }
+  info.textContent = `${pendingPhotos.length}/10장 선택됨`;
+  g.innerHTML = pendingPhotos.map((p,i) => `
+    <div class="photo-thumb">
+      <img src="${p.dataUrl}" alt="${p.name}" />
+      <button class="photo-thumb-del" onclick="removePreview(${i})" aria-label="삭제"><i class="ti ti-x" style="font-size:10px;"></i></button>
+    </div>`).join('');
+}
+function removePreview(i) { pendingPhotos.splice(i,1); renderPreview(); }
+
+function addVisit() {
+  const repId = parseInt(document.getElementById('v-rep').value);
+  const date  = document.getElementById('v-date').value.trim();
+  const store = document.getElementById('v-store').value.trim();
+  const channel = document.getElementById('v-channel').value;
+  const type  = document.getElementById('v-type').value;
+  const vmChecked = Array.from(document.querySelectorAll('#checklist-vm input:checked')).map(c=>c.value);
+  const issue = document.getElementById('v-issue').value.trim();
+  const action = document.getElementById('v-action').value.trim();
+  const urgent = document.getElementById('v-urgent').checked;
+
+  const competitors = [
+    { name: 'LOOK', note: document.getElementById('cp-look-note').value.trim() },
+    { name: 'LUXOTTICA', note: document.getElementById('cp-lux-note').value.trim() },
+    { name: 'DK', note: document.getElementById('cp-dk-note').value.trim() },
+  ].filter(c => c.note);
+
+  const brandBestsellers = [
+    { name: 'DIOR', product: document.getElementById('bp-dior-product').value.trim(), price: document.getElementById('bp-dior-price').value.trim() },
+    { name: 'CELINE', product: document.getElementById('bp-celine-product').value.trim(), price: document.getElementById('bp-celine-price').value.trim() },
+    { name: 'FERRAGAMO', product: document.getElementById('bp-ferragamo-product').value.trim(), price: document.getElementById('bp-ferragamo-price').value.trim() },
+    { name: 'MIUMIU', product: document.getElementById('bp-miumiu-product').value.trim(), price: document.getElementById('bp-miumiu-price').value.trim() },
+    { name: 'TOM FORD', product: document.getElementById('bp-tomford-product').value.trim(), price: document.getElementById('bp-tomford-price').value.trim() },
+  ].filter(b => b.product || b.price);
+
+  if(!date||!store) { showToast('날짜와 매장명을 입력해 주세요.'); return; }
+
+  const newVisit = { id: Date.now(), repId, date, store, channel, type, vmChecked, issue, action, urgent, competitors, brandBestsellers, photos:[...pendingPhotos] };
+  visits.unshift(newVisit);
+  saveData();
+  syncVisitToSheet(newVisit);
+
+  document.getElementById('v-date').value = todayStr;
+  document.getElementById('v-issue').value = '';
+  document.getElementById('v-action').value = '';
+  document.getElementById('v-urgent').checked = false;
+  document.querySelectorAll('#checklist-vm input').forEach(c=>c.checked=false);
+  ['look','lux','dk'].forEach(k => {
+    document.getElementById(`cp-${k}-note`).value = '';
+  });
+  ['dior','celine','ferragamo','miumiu','tomford'].forEach(k => {
+    document.getElementById(`bp-${k}-product`).value = '';
+    document.getElementById(`bp-${k}-price`).value = '';
+  });
+  pendingPhotos=[]; renderPreview();
+  showToast('방문 기록이 저장되었습니다.');
+  populateMonthSelects(); renderDashboard();
+}
+
+function renderHistory() {
+  const rf = document.getElementById('filter-rep').value;
+  const mf = document.getElementById('filter-month').value;
+  const uf = document.getElementById('filter-urgent').checked;
+  let fl = visits;
+  if(rf) fl = fl.filter(v=>String(v.repId)===rf);
+  if(mf) fl = fl.filter(v=>v.date&&v.date.slice(0,7)===mf);
+  if(uf) fl = fl.filter(v=>v.urgent);
+  const el = document.getElementById('history-list');
+  if(!fl.length) { el.innerHTML='<div class="card" style="text-align:center;padding:2rem;color:var(--text-muted);font-size:14px;">방문 기록이 없습니다.</div>'; return; }
+
+  el.innerHTML = fl.map(v => {
+    const rep = REPS.find(r=>r.id===v.repId)||{};
+    const pc = v.photos?v.photos.length:0;
+    const gallery = pc>0 ? `<div class="gallery-grid">${v.photos.map((p,pi)=>`
+      <div class="gallery-thumb" onclick="openLightbox(${v.id},${pi})" title="${p.name}">
+        <img src="${p.dataUrl}" alt="${p.name}" loading="lazy" />
+      </div>`).join('')}</div>` : '';
+
+    let detailHtml = '';
+    if(v.vmChecked && v.vmChecked.length) {
+      detailHtml += `<div class="detail-block"><div class="detail-block-title"><i class="ti ti-layout-grid" style="font-size:12px;margin-right:3px;"></i>VM 점검</div>${v.vmChecked.map(c=>`<span class="tag">${c}</span>`).join('')}</div>`;
+    }
+    if(v.issue || v.action) {
+      detailHtml += `<div class="detail-block"><div class="detail-block-title"><i class="ti ti-users" style="font-size:12px;margin-right:3px;"></i>매니저 면담</div>
+        ${v.issue?`<div><strong style="color:var(--text-primary);">이슈:</strong> ${v.issue}</div>`:''}
+        ${v.action?`<div style="margin-top:4px;"><strong style="color:var(--text-primary);">필요 조치:</strong> ${v.action}</div>`:''}
+      </div>`;
+    }
+    if(v.competitors && v.competitors.length) {
+      detailHtml += `<div class="detail-block"><div class="detail-block-title"><i class="ti ti-binoculars" style="font-size:12px;margin-right:3px;"></i>경쟁사 운영 현황</div>
+        ${v.competitors.map(c=>`<div style="margin-bottom:4px;"><strong style="color:var(--text-primary);">${c.name}</strong>${c.note?` — ${c.note}`:''}</div>`).join('')}
+      </div>`;
+    }
+    if(v.brandBestsellers && v.brandBestsellers.length) {
+      detailHtml += `<div class="detail-block"><div class="detail-block-title"><i class="ti ti-tag" style="font-size:12px;margin-right:3px;"></i>경쟁 브랜드 베스트상품</div>
+        ${v.brandBestsellers.map(b=>`<div style="margin-bottom:4px;"><strong style="color:var(--text-primary);">${b.name}</strong>${b.product?` · 품번 ${b.product}`:''}${b.price?` · ${b.price}`:''}</div>`).join('')}
+      </div>`;
+    }
+
+    return `<div class="visit-card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+        <div style="flex:1;">
+          <div class="visit-header">
+            <div class="visit-dot" style="background:${rep.color||'#ccc'}"></div>
+            <span style="font-size:15px;font-weight:500;">${v.store}</span>
+            <span class="tag">${v.channel||''}</span>
+            ${v.urgent?'<span class="issue-badge"><i class="ti ti-alert-triangle" style="font-size:11px;"></i>긴급</span>':''}
+            ${pc>0?`<span class="photo-badge"><i class="ti ti-camera" style="font-size:11px;"></i>${pc}장</span>`:''}
+          </div>
+          <div style="font-size:12px;color:var(--text-muted);margin-left:16px;">${rep.name||''} · ${v.date} · ${v.type||''}</div>
+          ${detailHtml}
+          ${gallery}
+        </div>
+        <button onclick="deleteVisit(${v.id})" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:18px;padding:0 0 0 8px;flex-shrink:0;" aria-label="삭제"><i class="ti ti-trash"></i></button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function deleteVisit(id) {
+  visits = visits.filter(v=>v.id!==id); saveData();
+  renderHistory(); renderDashboard(); showToast('기록이 삭제되었습니다.');
+}
+
+function openLightbox(visitId, idx) {
+  const visit = visits.find(v=>v.id===visitId);
+  if(!visit||!visit.photos) return;
+  lbVisitId = visitId; lbPhotoIdx = idx;
+  showLightboxPhoto();
+  document.getElementById('lightbox').classList.add('open');
+}
+function showLightboxPhoto() {
+  const visit = visits.find(v=>v.id===lbVisitId);
+  if(!visit) return;
+  const p = visit.photos[lbPhotoIdx];
+  document.getElementById('lightbox-img').src = p.dataUrl;
+  document.getElementById('lightbox-caption').textContent = `${visit.store} · ${visit.date} · ${p.name} (${lbPhotoIdx+1}/${visit.photos.length})`;
+  const nav = document.getElementById('lightbox-nav');
+  nav.innerHTML = visit.photos.length>1 ? `
+    <button onclick="lbPrev()" ${lbPhotoIdx===0?'disabled':''}><i class="ti ti-arrow-left"></i> 이전</button>
+    <button onclick="lbNext()" ${lbPhotoIdx===visit.photos.length-1?'disabled':''}><i class="ti ti-arrow-right"></i> 다음</button>` : '';
+}
+function lbPrev() { lbPhotoIdx--; showLightboxPhoto(); }
+function lbNext() { lbPhotoIdx++; showLightboxPhoto(); }
+function closeLightbox() { document.getElementById('lightbox').classList.remove('open'); }
+function closeLightboxBg(e) { if(e.target===document.getElementById('lightbox')) closeLightbox(); }
+
+function renderGoalSettings() {
+  document.getElementById('goal-settings').innerHTML = `
+    <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px;">${thisMonth} 월간 방문 목표와 영업사원을 관리하세요.</p>
+    ${REPS.map(r=>`
+    <div class="goal-row">
+      <div class="avatar" style="background:${r.color};color:${r.textColor};width:28px;height:28px;font-size:11px;flex-shrink:0;">${r.initials}</div>
+      <input type="text" value="${r.name}" style="width:90px;flex-shrink:0;" onchange="renameRep(${r.id},this.value)" />
+      <input type="number" min="1" max="100" value="${getGoal(r.id,thisMonth)}" style="width:64px;flex-shrink:0;" onchange="setGoal(${r.id},'${thisMonth}',this.value);renderDashboard();" />
+      <span style="font-size:12px;color:var(--text-muted);flex-shrink:0;">회</span>
+      <button class="btn btn-ghost btn-sm" style="margin-left:auto;padding:5px 8px;" onclick="removeRep(${r.id})" aria-label="${r.name} 삭제"><i class="ti ti-trash" style="font-size:14px;"></i></button>
+    </div>`).join('')}
+    <div class="divider"></div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <input type="text" id="new-rep-name" placeholder="새 영업사원 이름" style="flex:1;" onkeydown="if(event.key==='Enter') addRep();" />
+      <button class="btn btn-primary btn-sm" onclick="addRep()"><i class="ti ti-plus"></i> 추가</button>
+    </div>`;
+}
+
+function loadSyncUrlField() {
+  const url = localStorage.getItem('keco_sync_url') || '';
+  document.getElementById('sync-url').value = url;
+}
+
+function saveSyncUrl() {
+  const url = document.getElementById('sync-url').value.trim();
+  if(url && !url.startsWith('https://script.google.com/')) {
+    showToast('올바른 Apps Script 웹 앱 URL이 아닙니다.');
+    return;
+  }
+  localStorage.setItem('keco_sync_url', url);
+  showToast(url ? '공유 저장소 URL이 저장되었습니다.' : '공유 저장소 연동이 해제되었습니다.');
+  document.getElementById('sync-status').textContent = '';
+}
+
+function getSyncUrl() {
+  const DEFAULT_SYNC_URL = 'https://script.google.com/macros/s/AKfycbz2gVwN-bg8z7mb4Pz3Z9hWkjqwtExXrsTa-DIae9CuYBRSk_cKECeA5fp3QSjfYFNqyQ/exec';
+  return localStorage.getItem('keco_sync_url') || DEFAULT_SYNC_URL;
+}
+
+function syncVisitToSheet(visit) {
+  const url = getSyncUrl();
+  if(!url) return;
+  const rep = REPS.find(r => r.id === visit.repId);
+  const payload = Object.assign({}, visit, { repName: rep ? rep.name : '' });
+  fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(payload)
+  }).catch(() => {
+    // 네트워크 오류는 조용히 무시 (로컬 저장은 이미 완료된 상태)
+  });
+}
+
+function pullSharedVisits() {
+  const url = getSyncUrl();
+  const status = document.getElementById('sync-status');
+  if(!url) { showToast('먼저 웹 앱 URL을 저장해 주세요.'); return; }
+  status.textContent = '불러오는 중...';
+  fetch(url)
+    .then(res => res.json())
+    .then(data => {
+      if(data.result !== 'success') throw new Error(data.message || '오류');
+      const shared = data.visits || [];
+      let added = 0;
+      shared.forEach(row => {
+        const id = row['id'];
+        if(!id || visits.some(v => String(v.id) === String(id))) return;
+        const rep = REPS.find(r => r.name === row['담당사원명']);
+        let competitors = []; let brandBestsellers = [];
+        try { competitors = JSON.parse(row['경쟁사동향'] || '[]'); } catch(e){}
+        try { brandBestsellers = JSON.parse(row['경쟁브랜드베스트셀러'] || '[]'); } catch(e){}
+        const photoUrls = (row['사진URL'] || '').split(',').map(s=>s.trim()).filter(Boolean);
+        visits.push({
+          id: id,
+          repId: rep ? rep.id : null,
+          date: row['방문날짜'],
+          store: row['매장명'],
+          channel: row['매장구분'],
+          type: row['방문유형'],
+          vmChecked: (row['VM점검항목'] || '').split(',').map(s=>s.trim()).filter(Boolean),
+          issue: row['이슈'] || '',
+          action: row['필요조치'] || '',
+          urgent: row['긴급여부'] === 'Y',
+          competitors, brandBestsellers,
+          photos: photoUrls.map(u => ({ dataUrl: u, name: '' })),
+          fromSheet: true
+        });
+        added++;
+      });
+      saveData();
+      populateMonthSelects(); renderDashboard(); renderHistory();
+      status.textContent = `동기화 완료 — ${added}건 새로 가져옴 (전체 ${visits.length}건)`;
+      showToast('팀 전체 방문 기록을 불러왔습니다.');
+    })
+    .catch(err => {
+      status.textContent = '불러오기 실패: ' + err.message;
+      showToast('동기화에 실패했습니다. URL을 확인해 주세요.');
+    });
+}
+
+
+function renameRep(id, newName) {
+  newName = newName.trim();
+  if(!newName) { renderGoalSettings(); return; }
+  const rep = REPS.find(r=>r.id===id);
+  if(!rep) return;
+  rep.name = newName;
+  rep.initials = newName.slice(0,2);
+  saveReps();
+  renderGoalSettings();
+  renderRepSelects();
+  renderDashboard();
+  renderHistory();
+  showToast('이름이 수정되었습니다.');
+}
+
+function addRep() {
+  const input = document.getElementById('new-rep-name');
+  const name = input.value.trim();
+  if(!name) { showToast('이름을 입력해 주세요.'); return; }
+  const newId = REPS.length ? Math.max(...REPS.map(r=>r.id)) + 1 : 1;
+  const palette = COLOR_PALETTE[REPS.length % COLOR_PALETTE.length];
+  REPS.push({ id: newId, name, initials: name.slice(0,2), color: palette.color, textColor: palette.textColor });
+  saveReps();
+  renderGoalSettings();
+  renderRepSelects();
+  renderDashboard();
+  showToast(`${name}님이 추가되었습니다.`);
+}
+
+function removeRep(id) {
+  const rep = REPS.find(r=>r.id===id);
+  if(!rep) return;
+  const hasVisits = visits.some(v=>v.repId===id);
+  const msg = hasVisits ? `${rep.name}님은 방문 기록이 있습니다. 그래도 삭제하시겠습니까? (기록은 유지되지만 사원 목록에서 사라집니다)` : `${rep.name}님을 삭제하시겠습니까?`;
+  if(!confirm(msg)) return;
+  REPS = REPS.filter(r=>r.id!==id);
+  saveReps();
+  renderGoalSettings();
+  renderRepSelects();
+  renderDashboard();
+  renderHistory();
+  showToast(`${rep.name}님이 삭제되었습니다.`);
+}
+
+function renderRepSelects() {
+  document.getElementById('v-rep').innerHTML = REPS.map(r=>`<option value="${r.id}">${r.name}</option>`).join('');
+  document.getElementById('filter-rep').innerHTML = '<option value="">전체 사원</option>' + REPS.map(r=>`<option value="${r.id}">${r.name}</option>`).join('');
+}
+
+function showTab(name) {
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  document.querySelectorAll('.tab').forEach(t=>{ if(t.getAttribute('onclick').includes("'"+name+"'")) t.classList.add('active'); });
+  if(name==='history') { populateMonthSelects(); renderHistory(); }
+  if(name==='guide') { renderGoalSettings(); loadSyncUrlField(); }
+  if(name==='dashboard') renderDashboard();
+}
+
+function exportToExcel() {
+  if(!visits.length) { showToast('내보낼 방문 기록이 없습니다.'); return; }
+
+  const rows = visits.slice().reverse().map(v => {
+    const rep = REPS.find(r=>r.id===v.repId);
+    const repName = rep ? rep.name : `(삭제된 사원 #${v.repId})`;
+    const compMap = {};
+    (v.competitors||[]).forEach(c => { compMap[c.name] = c.note || ''; });
+    const brandMap = {};
+    (v.brandBestsellers||[]).forEach(b => {
+      brandMap[b.name+'_품번'] = b.product || '';
+      brandMap[b.name+'_가격'] = b.price || '';
+    });
+    return {
+      '방문일자': v.date || '',
+      '담당사원': repName,
+      '매장명': v.store || '',
+      '채널유형': v.channel || '',
+      '방문유형': v.type || '',
+      '긴급이슈여부': v.urgent ? 'Y' : 'N',
+      'VM점검항목': (v.vmChecked||[]).join(', '),
+      '매니저면담_이슈사항': v.issue || '',
+      '매니저면담_필요조치': v.action || '',
+      '경쟁사_LOOK_운영현황': compMap['LOOK'] || '',
+      '경쟁사_LUXOTTICA_운영현황': compMap['LUXOTTICA'] || '',
+      '경쟁사_DK_운영현황': compMap['DK'] || '',
+      'DIOR_품번': brandMap['DIOR_품번'] || '',
+      'DIOR_가격': brandMap['DIOR_가격'] || '',
+      'CELINE_품번': brandMap['CELINE_품번'] || '',
+      'CELINE_가격': brandMap['CELINE_가격'] || '',
+      'FERRAGAMO_품번': brandMap['FERRAGAMO_품번'] || '',
+      'FERRAGAMO_가격': brandMap['FERRAGAMO_가격'] || '',
+      'MIUMIU_품번': brandMap['MIUMIU_품번'] || '',
+      'MIUMIU_가격': brandMap['MIUMIU_가격'] || '',
+      'TOM FORD_품번': brandMap['TOM FORD_품번'] || '',
+      'TOM FORD_가격': brandMap['TOM FORD_가격'] || '',
+      '첨부사진수': v.photos ? v.photos.length : 0,
+    };
+  });
+
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const colWidths = Object.keys(rows[0]).map(key => {
+    const maxLen = Math.max(key.length, ...rows.map(r => String(r[key]||'').length));
+    return { wch: Math.min(Math.max(maxLen + 2, 10), 40) };
+  });
+  ws['!cols'] = colWidths;
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '방문기록');
+
+  const fname = `케어링아이웨어코리아_매장방문기록_${todayStr}.xlsx`;
+  XLSX.writeFile(wb, fname);
+  showToast('엑셀 파일이 다운로드되었습니다.');
+}
+
+function showToast(msg) {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.style.display='block';
+  setTimeout(()=>t.style.display='none',2500);
+}
+
+// ── PWA: 서비스워커 등록 & 설치 프롬프트 ──────────────────────
+let _deferredInstall = null;
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  });
+}
+
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  _deferredInstall = e;
+  const btn = document.getElementById('pwa-install-btn');
+  btn.style.display = 'inline-flex';
+  btn.style.alignItems = 'center';
+  btn.style.gap = '6px';
+});
+
+window.addEventListener('appinstalled', () => {
+  document.getElementById('pwa-install-btn').style.display = 'none';
+  _deferredInstall = null;
+  showToast('앱이 홈 화면에 설치되었습니다! 🎉');
+});
+
+function installPWA() {
+  if (!_deferredInstall) return;
+  _deferredInstall.prompt();
+  _deferredInstall.userChoice.then(() => { _deferredInstall = null; });
+}
+// ──────────────────────────────────────────────────────────────
+
+function init() {
+  renderRepSelects();
+  onChannelChange();
+  populateMonthSelects();
+  renderDashboard();
+  document.getElementById('v-date').value = todayStr;
+}
+init();
+</script>
+</body>
+</html>
