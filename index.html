@@ -526,6 +526,7 @@ function setGoalStore(rid, m, idx, storeName) {
   }
   goals[m][rid] = goals[m][rid].filter(s => s && s !== '');
   saveData();
+  syncGoalsToSheet();
 }
 function getAchievedStores(rid, m) {
   const goalStores = getGoalStores(rid, m);
@@ -855,9 +856,17 @@ function syncVisitToSheet(visit) {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
     body: JSON.stringify(payload)
-  }).catch(() => {
-    // 네트워크 오류는 조용히 무시 (로컬 저장은 이미 완료된 상태)
-  });
+  }).catch(() => {});
+}
+
+function syncGoalsToSheet() {
+  const url = getSyncUrl();
+  if(!url) return;
+  fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ type: 'goals', goals: goals })
+  }).catch(() => {});
 }
 
 function pullSharedVisits() {
@@ -869,6 +878,22 @@ function pullSharedVisits() {
     .then(res => res.json())
     .then(data => {
       if(data.result !== 'success') throw new Error(data.message || '오류');
+
+      // ── 목표 매장 설정 병합 ──────────────────────────────
+      if(data.goals && typeof data.goals === 'object') {
+        Object.keys(data.goals).forEach(month => {
+          if(!goals[month]) goals[month] = {};
+          Object.keys(data.goals[month]).forEach(rid => {
+            // 서버 데이터로 덮어쓰기 (가장 최근 저장된 값이 기준)
+            goals[month][rid] = data.goals[month][rid];
+          });
+        });
+        saveData();
+        renderGoalSettings();
+        renderDashboard();
+      }
+
+      // ── 방문 기록 병합 ────────────────────────────────────
       const shared = data.visits || [];
       let added = 0;
       shared.forEach(row => {
@@ -880,15 +905,11 @@ function pullSharedVisits() {
         try { brandBestsellers = JSON.parse(row['경쟁브랜드베스트셀러'] || '[]'); } catch(e){}
         const photoUrls = (row['사진URL'] || '').split(',').map(s=>s.trim()).filter(Boolean);
         visits.push({
-          id: id,
-          repId: rep ? rep.id : null,
-          date: row['방문날짜'],
-          store: row['매장명'],
-          channel: row['매장구분'],
+          id, repId: rep ? rep.id : null,
+          date: row['방문날짜'], store: row['매장명'], channel: row['매장구분'],
           type: row['방문유형'],
           vmChecked: (row['VM점검항목'] || '').split(',').map(s=>s.trim()).filter(Boolean),
-          issue: row['이슈'] || '',
-          action: row['필요조치'] || '',
+          issue: row['이슈'] || '', action: row['필요조치'] || '',
           urgent: row['긴급여부'] === 'Y',
           competitors, brandBestsellers,
           photos: photoUrls.map(u => ({ dataUrl: u, name: '' })),
@@ -898,8 +919,8 @@ function pullSharedVisits() {
       });
       saveData();
       populateMonthSelects(); renderDashboard(); renderHistory();
-      status.textContent = `동기화 완료 — ${added}건 새로 가져옴 (전체 ${visits.length}건)`;
-      showToast('팀 전체 방문 기록을 불러왔습니다.');
+      status.textContent = `동기화 완료 — 방문 ${added}건 새로 가져옴 · 목표 설정 반영됨`;
+      showToast('팀 전체 데이터를 불러왔습니다.');
     })
     .catch(err => {
       status.textContent = '불러오기 실패: ' + err.message;
