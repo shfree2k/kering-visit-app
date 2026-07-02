@@ -409,7 +409,7 @@ textarea { resize: vertical; min-height: 64px; }
     <div class="card">
       <p style="font-size:14px;font-weight:500;margin-bottom:10px;"><i class="ti ti-target" style="color:var(--text-accent);margin-right:6px;"></i>월간 목표 관리 원칙</p>
       <div style="font-size:13px;color:var(--text-secondary);line-height:1.9;">
-        <div>· 월초: 해당 월에 방문할 목표 매장 선택 (최대 8개)</div>
+        <div>· 월초: 해당 월에 방문할 목표 매장 선택</div>
         <div>· 방문 기록 저장 시 목표 매장과 일치하면 자동으로 달성률 반영</div>
         <div>· 월중: 주 1회 달성률 점검, 미방문 목표 매장 우선순위 조정</div>
         <div>· 월말: 미방문 목표 매장 중심으로 마감 방문 계획 수립</div>
@@ -514,7 +514,7 @@ function populateMonthSelects() {
   });
 }
 
-// goals[month][repId] = ["매장명1", "매장명2", ...] 최대 8개
+// goals[month][repId] = ["매장명1", "매장명2", ...]
 function getGoalStores(rid, m) {
   return (goals[m] && goals[m][rid]) ? (Array.isArray(goals[m][rid]) ? goals[m][rid] : []) : [];
 }
