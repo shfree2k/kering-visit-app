@@ -429,7 +429,6 @@ textarea { resize: vertical; min-height: 64px; }
       </div>
       <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
         <button class="btn btn-primary" onclick="saveSyncUrl()"><i class="ti ti-device-floppy"></i> URL 저장</button>
-        <button class="btn btn-ghost" onclick="manualSyncGoals()"><i class="ti ti-target"></i> 목표 매장 업로드</button>
         <button class="btn btn-ghost" onclick="pullSharedVisits()"><i class="ti ti-refresh"></i> 팀 전체 데이터 불러오기</button>
       </div>
       <div id="sync-status" style="font-size:12px;color:var(--text-secondary);padding:8px 10px;background:var(--surface-1);border-radius:var(--radius);display:none;"></div>
@@ -791,43 +790,90 @@ function closeLightbox() { document.getElementById('lightbox').classList.remove(
 function closeLightboxBg(e) { if(e.target===document.getElementById('lightbox')) closeLightbox(); }
 
 function renderGoalSettings() {
-  const allStores = [...STORES.DS, ...STORES.TR];
-  const storeOptions = `<option value="">-- 매장 선택 --</option>` +
-    `<optgroup label="DS (백화점)">` +
+  const storeOptions = `<option value="">＋ 매장 추가</option>` +
+    `<optgroup label="DS">` +
     STORES.DS.map(s=>`<option value="${s}">${s}</option>`).join('') +
     `</optgroup>` +
-    `<optgroup label="TR (면세점)">` +
+    `<optgroup label="TR">` +
     STORES.TR.map(s=>`<option value="${s}">${s}</option>`).join('') +
     `</optgroup>`;
 
   document.getElementById('goal-settings').innerHTML = `
-    <p style="font-size:13px;color:var(--text-secondary);margin-bottom:14px;">${thisMonth} 각 영업사원의 목표 방문 매장을 설정하세요. (최대 8개)</p>
+    <p style="font-size:12px;color:var(--text-muted);margin-bottom:16px;">${thisMonth} 방문 목표 매장을 설정하세요. 드롭다운에서 매장을 선택하면 추가됩니다.</p>
     ${REPS.map(r => {
       const gs = getGoalStores(r.id, thisMonth);
-      const slots = Array.from({length: 8}, (_, i) => gs[i] || '');
+      const achieved = getAchievedStores(r.id, thisMonth);
       return `
-      <div style="margin-bottom:16px;">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+      <div style="margin-bottom:20px;padding-bottom:20px;border-bottom:0.5px solid var(--border);">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
           <div class="avatar" style="background:${r.color};color:${r.textColor};width:28px;height:28px;font-size:11px;flex-shrink:0;">${r.initials}</div>
-          <input type="text" value="${r.name}" style="width:90px;flex-shrink:0;" onchange="renameRep(${r.id},this.value)" />
-          <span style="font-size:12px;color:var(--text-muted);">${gs.length}/8 매장 설정됨</span>
-          <button class="btn btn-ghost btn-sm" style="margin-left:auto;padding:5px 8px;" onclick="removeRep(${r.id})" aria-label="${r.name} 삭제"><i class="ti ti-trash" style="font-size:14px;"></i></button>
+          <input type="text" value="${r.name}" style="width:80px;flex-shrink:0;font-size:13px;padding:4px 8px;" onchange="renameRep(${r.id},this.value)" />
+          <span style="font-size:11px;color:var(--text-muted);">${achieved.length}/${gs.length} 달성</span>
+          <button class="btn btn-ghost btn-sm" style="margin-left:auto;" onclick="removeRep(${r.id})"><i class="ti ti-trash" style="font-size:13px;"></i></button>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;padding-left:36px;">
-          ${slots.map((val, i) => `
-            <select style="font-size:12px;padding:5px 8px;" onchange="setGoalStore(${r.id},'${thisMonth}',${i},this.value);renderGoalSettings();renderDashboard();">
-              ${storeOptions.replace(`value="${val}"`, `value="${val}" selected`)}
-            </select>
-          `).join('')}
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+          <select style="font-size:12px;padding:5px 8px;flex:1;max-width:220px;"
+            onchange="if(this.value){addGoalStore(${r.id},'${thisMonth}',this.value);this.value='';}">
+            ${storeOptions}
+          </select>
+        </div>
+        <div id="goal-chips-${r.id}" style="display:flex;flex-wrap:wrap;gap:6px;min-height:28px;">
+          ${gs.map((s,i) => {
+            const done = achieved.includes(s);
+            return `<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:3px 10px 3px 10px;border-radius:99px;
+              background:${done?'var(--bg-success)':'var(--surface-1)'};
+              color:${done?'var(--text-success)':'var(--text-secondary)'};
+              border:0.5px solid ${done?'var(--fill-success)':'var(--border)'};white-space:nowrap;">
+              ${done?'<i class="ti ti-check" style="font-size:10px;"></i>':''} ${s.replace(/^(DS|TR) /,'')}
+              <button onclick="removeGoalStore(${r.id},'${thisMonth}',${i})" style="background:none;border:none;cursor:pointer;color:inherit;padding:0;margin-left:2px;font-size:13px;line-height:1;opacity:0.6;">×</button>
+            </span>`;
+          }).join('')}
+          ${gs.length===0?`<span style="font-size:11px;color:var(--text-muted);font-style:italic;">목표 매장 없음</span>`:''}
         </div>
       </div>`;
     }).join('')}
-    <div class="divider"></div>
-    <div style="display:flex;gap:8px;align-items:center;">
-      <input type="text" id="new-rep-name" placeholder="새 영업사원 이름" style="flex:1;" onkeydown="if(event.key==='Enter') addRep();" />
+    <div style="display:flex;gap:8px;align-items:center;margin-top:4px;">
+      <input type="text" id="new-rep-name" placeholder="새 영업사원 이름" style="flex:1;font-size:13px;" onkeydown="if(event.key==='Enter') addRep();" />
       <button class="btn btn-primary btn-sm" onclick="addRep()"><i class="ti ti-plus"></i> 추가</button>
     </div>`;
 }
+
+function addGoalStore(rid, m, storeName) {
+  if (!goals[m]) goals[m] = {};
+  if (!Array.isArray(goals[m][rid])) goals[m][rid] = [];
+  if (!goals[m][rid].includes(storeName)) {
+    goals[m][rid].push(storeName);
+    saveData();
+    syncGoalsToSheet(true);
+    renderGoalSettings();
+    renderDashboard();
+  }
+}
+
+function removeGoalStore(rid, m, idx) {
+  if (!goals[m] || !Array.isArray(goals[m][rid])) return;
+  goals[m][rid].splice(idx, 1);
+  saveData();
+  syncGoalsToSheet(true);
+  renderGoalSettings();
+  renderDashboard();
+}
+
+// 구글시트에서 불러온 날짜를 KST 기준 YYYY-MM-DD로 정규화
+function toKSTDateStr(val) {
+  if (!val) return '';
+  const s = String(val).trim();
+  // ISO 날짜시간 문자열인 경우 (예: "2025-07-01T15:00:00.000Z")
+  // → UTC 기준이므로 KST(+9h) 오프셋을 적용해서 날짜를 추출
+  if (s.includes('T')) {
+    const d = new Date(s);
+    const kst = new Date(d.getTime() + 9 * 60 * 60 * 1000);
+    return kst.toISOString().slice(0, 10);
+  }
+  // 이미 YYYY-MM-DD 형태인 경우 그대로 반환
+  return s.slice(0, 10);
+}
+
 
 function loadSyncUrlField() {
   const url = localStorage.getItem('keco_sync_url') || '';
@@ -899,10 +945,10 @@ function manualSyncGoals() {
   syncGoalsToSheet(false);
 }
 
-function pullSharedVisits() {
+function pullSharedVisits(silent) {
   const url = getSyncUrl();
-  if(!url) { showToast('먼저 웹 앱 URL을 저장해 주세요.'); return; }
-  setSyncStatus('서버에서 데이터 불러오는 중...');
+  if(!url) { if(!silent) showToast('먼저 웹 앱 URL을 저장해 주세요.'); return; }
+  if(!silent) setSyncStatus('서버에서 데이터 불러오는 중...');
   fetch(url)
     .then(res => res.json())
     .then(data => {
@@ -934,7 +980,7 @@ function pullSharedVisits() {
         const photoUrls = (row['사진URL'] || '').split(',').map(s=>s.trim()).filter(Boolean);
         visits.push({
           id, repId: rep ? rep.id : null,
-          date: row['방문날짜'], store: row['매장명'], channel: row['매장구분'],
+          date: toKSTDateStr(row['방문날짜']), store: row['매장명'], channel: row['매장구분'],
           type: row['방문유형'],
           vmChecked: (row['VM점검항목'] || '').split(',').map(s=>s.trim()).filter(Boolean),
           issue: row['이슈'] || '', action: row['필요조치'] || '',
@@ -947,13 +993,19 @@ function pullSharedVisits() {
       });
       saveData();
       populateMonthSelects(); renderDashboard(); renderHistory();
-      const goalsLoaded = data.goals ? '· 목표 매장 반영됨' : '';
-      setSyncStatus(`✓ 동기화 완료 — 방문 ${added}건 새로 가져옴 ${goalsLoaded}`);
-      showToast('팀 전체 데이터를 불러왔습니다.');
+      if(!silent) {
+        const goalsLoaded = data.goals ? '· 목표 매장 반영됨' : '';
+        setSyncStatus(`✓ 동기화 완료 — 방문 ${added}건 새로 가져옴 ${goalsLoaded}`);
+        showToast('팀 전체 데이터를 불러왔습니다.');
+      } else if(added > 0) {
+        showToast(`새 방문 기록 ${added}건 자동 동기화됨`);
+      }
     })
     .catch(err => {
-      setSyncStatus('불러오기 실패: ' + err.message + ' — Code.gs가 최신 버전으로 재배포됐는지 확인해 주세요.', true);
-      showToast('동기화에 실패했습니다.');
+      if(!silent) {
+        setSyncStatus('불러오기 실패: ' + err.message + ' — Code.gs가 최신 버전으로 재배포됐는지 확인해 주세요.', true);
+        showToast('동기화에 실패했습니다.');
+      }
     });
 }
 
@@ -1125,6 +1177,10 @@ function init() {
   populateMonthSelects();
   renderDashboard();
   document.getElementById('v-date').value = todayStr;
+  // 앱 접속·새로고침 시 자동으로 팀 전체 데이터 불러오기
+  if(getSyncUrl()) {
+    setTimeout(() => pullSharedVisits(true), 1000);
+  }
 }
 init();
 </script>
