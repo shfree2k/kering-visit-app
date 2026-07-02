@@ -811,9 +811,10 @@ function renderHistory() {
       </div>`;
     }
 
+    const isOwner = String(v.repId) === String(getCurrentRepId());
     return `<div class="visit-card">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;">
-        <div style="flex:1;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+        <div style="flex:1;min-width:0;">
           <div class="visit-header">
             <div class="visit-dot" style="background:${rep.color||'#ccc'}"></div>
             <span style="font-size:15px;font-weight:500;">${v.store}</span>
@@ -821,16 +822,15 @@ function renderHistory() {
             ${v.urgent?'<span class="issue-badge"><i class="ti ti-alert-triangle" style="font-size:11px;"></i>긴급</span>':''}
             ${pc>0?`<span class="photo-badge"><i class="ti ti-camera" style="font-size:11px;"></i>${pc}장</span>`:''}
           </div>
-          <div style="font-size:12px;color:var(--text-muted);margin-left:16px;">${rep.name||''} · ${v.date} · ${v.type||''}</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-left:16px;margin-top:2px;">${rep.name||''} · ${v.date} · ${v.type||''}</div>
           ${detailHtml}
           ${gallery}
         </div>
-        <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;padding-left:8px;">
-          ${String(v.repId) === String(getCurrentRepId()) ? `
-            <button onclick="editVisit(${v.id})" style="background:none;border:0.5px solid var(--border-strong);border-radius:6px;cursor:pointer;color:var(--text-secondary);font-size:12px;padding:4px 8px;font-family:var(--font-sans);white-space:nowrap;"><i class="ti ti-pencil" style="font-size:12px;"></i> 수정</button>
-            <button onclick="deleteVisit(${v.id})" style="background:none;border:0.5px solid var(--border-strong);border-radius:6px;cursor:pointer;color:var(--text-danger);font-size:12px;padding:4px 8px;font-family:var(--font-sans);white-space:nowrap;"><i class="ti ti-trash" style="font-size:12px;"></i> 삭제</button>
-          ` : ''}
-        </div>
+        ${isOwner ? `
+        <div style="display:flex;flex-direction:column;gap:5px;flex-shrink:0;margin-top:2px;">
+          <button onclick="editVisit(${v.id})" style="background:none;border:0.5px solid var(--border-strong);border-radius:6px;cursor:pointer;color:var(--text-secondary);font-size:11px;padding:4px 10px;font-family:var(--font-sans);white-space:nowrap;display:flex;align-items:center;gap:4px;"><i class="ti ti-pencil" style="font-size:11px;"></i> 수정</button>
+          <button onclick="deleteVisit(${v.id})" style="background:none;border:0.5px solid rgba(163,32,32,0.3);border-radius:6px;cursor:pointer;color:var(--text-danger);font-size:11px;padding:4px 10px;font-family:var(--font-sans);white-space:nowrap;display:flex;align-items:center;gap:4px;"><i class="ti ti-trash" style="font-size:11px;"></i> 삭제</button>
+        </div>` : ''}
       </div>
     </div>`;
   }).join('');
@@ -1188,6 +1188,14 @@ function pullSharedVisits(silent) {
 
       // ── 방문 기록 병합 ────────────────────────────────────
       const shared = data.visits || [];
+      const serverIds = new Set(shared.map(r => String(r['id'])).filter(Boolean));
+
+      // 서버에서 삭제된 기록은 로컬에서도 제거
+      visits = visits.filter(v => {
+        if(v.fromSheet) return serverIds.has(String(v.id));
+        return true; // 로컬 전용 기록은 유지
+      });
+
       let added = 0;
       shared.forEach(row => {
         const id = row['id'];
