@@ -759,6 +759,7 @@ function addVisit() {
   pendingPhotos=[]; renderPreview();
   showToast('방문 기록이 저장되었습니다.');
   populateMonthSelects(); renderDashboard();
+  setRepToCurrentUser();
 }
 
 function renderHistory() {
@@ -844,9 +845,7 @@ function setCurrentRep(repId) {
   localStorage.setItem('keco_current_rep_id', String(repId));
   updateCurrentUserBar();
   document.getElementById('user-modal').style.display = 'none';
-  // 방문기록 탭 담당사원 드롭다운도 자동 선택
-  const sel = document.getElementById('v-rep');
-  if(sel) sel.value = String(repId);
+  setRepToCurrentUser();
 }
 function updateCurrentUserBar() {
   const id = getCurrentRepId();
@@ -1125,7 +1124,16 @@ function syncVisitToSheet(visit) {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
     body: JSON.stringify(payload)
-  }).catch(() => {});
+  })
+  .then(res => res.json())
+  .then(data => {
+    if(data.result === 'success') {
+      // 서버 저장 확인 후 fromSheet 표시 → 이후 삭제 동기화 대상에 포함
+      const v = visits.find(x => x.id === visit.id);
+      if(v) { v.fromSheet = true; saveData(); }
+    }
+  })
+  .catch(() => {});
 }
 
 function setSyncStatus(msg, isError) {
@@ -1398,6 +1406,13 @@ function installPWA() {
 }
 // ──────────────────────────────────────────────────────────────
 
+function setRepToCurrentUser() {
+  const id = getCurrentRepId();
+  if(!id) return;
+  const sel = document.getElementById('v-rep');
+  if(sel) sel.value = id;
+}
+
 function init() {
   renderRepSelects();
   onChannelChange();
@@ -1405,11 +1420,10 @@ function init() {
   renderDashboard();
   document.getElementById('v-date').value = todayStr;
   updateCurrentUserBar();
-  // 현재 사용자 미설정 시 선택 모달 표시
+  setRepToCurrentUser();
   if(!getCurrentRepId()) {
     setTimeout(() => showUserModal(), 800);
   }
-  // 앱 접속·새로고침 시 자동으로 팀 전체 데이터 불러오기
   if(getSyncUrl()) {
     setTimeout(() => pullSharedVisits(true), 1000);
   }
