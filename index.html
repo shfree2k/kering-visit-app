@@ -128,6 +128,38 @@ textarea { resize: vertical; min-height: 64px; }
 .brand-chip-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .source-note { font-size: 11px; color: var(--text-muted); margin-top: 1.5rem; line-height: 1.6; border-top: 0.5px solid var(--border); padding-top: 12px; }
 #ios-install-banner { background: var(--surface-2) !important; border-top: 0.5px solid var(--border) !important; box-shadow: 0 -4px 24px rgba(0,0,0,0.08) !important; }
+/* ── 캘린더 / 월 네비게이션 ─────────────────────────── */
+.dash-monthbar { display: flex; align-items: center; gap: 6px; margin-bottom: 1.25rem; flex-wrap: wrap; }
+.mnav-btn { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border: 0.5px solid var(--border-strong); border-radius: var(--radius); background: var(--surface-2); cursor: pointer; color: var(--text-primary); font-size: 16px; }
+.mnav-btn:hover { background: var(--surface-1); }
+.month-label { font-size: 15px; font-weight: 600; min-width: 108px; text-align: center; }
+.mchip { font-size: 11px; padding: 4px 11px; border-radius: 99px; border: 0.5px solid var(--border-strong); background: var(--surface-2); cursor: pointer; color: var(--text-secondary); font-family: var(--font-sans); letter-spacing: 0.04em; }
+.mchip:hover { background: var(--surface-1); }
+.rep-card.selectable { cursor: pointer; }
+.rep-card.selectable.active { border-color: var(--text-primary); box-shadow: 0 0 0 1.5px var(--text-primary); }
+.cal-chiprow { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 6px; -ms-overflow-style: none; scrollbar-width: none; }
+.cal-chiprow::-webkit-scrollbar { display: none; }
+.cal-chip { flex: 0 0 auto; font-size: 12px; padding: 5px 13px; border-radius: 99px; border: 0.5px solid var(--border-strong); background: var(--surface-2); color: var(--text-secondary); cursor: pointer; font-family: var(--font-sans); white-space: nowrap; }
+.cal-chip.active { background: var(--text-primary); color: #fff; border-color: transparent; }
+.cal-legend { display: flex; gap: 12px; flex-wrap: wrap; margin: 2px 0 10px; font-size: 11px; color: var(--text-secondary); align-items: center; }
+.cal-legend .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; margin-right: 4px; vertical-align: -1px; }
+.cal-dow { display: grid; grid-template-columns: repeat(7,1fr); gap: 3px; text-align: center; font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
+.cal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 3px; grid-auto-rows: min-content; }
+.cal-cell { min-height: 52px; border-radius: 8px; border: 0.5px solid var(--border); background: var(--surface-2); padding: 3px 3px 5px; overflow: hidden; cursor: pointer; }
+.cal-cell.empty { border: none; background: transparent; cursor: default; }
+.cal-cell.sel { border-color: var(--text-primary); }
+.cal-cell.editable { border-color: var(--border-accent); }
+.cal-cell.readonly { background: var(--surface-1); cursor: default; }
+.cal-daynum { font-size: 11px; color: var(--text-muted); line-height: 1.2; padding-left: 1px; }
+.cal-daynum.on { color: var(--text-primary); }
+.cal-pill { font-size: 11px; margin-top: 3px; padding: 2px 5px; border-radius: 5px; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cal-dotwrap { display: flex; flex-wrap: wrap; gap: 2px; margin-top: 3px; }
+.cal-repdot { width: 7px; height: 7px; border-radius: 50%; }
+.cal-daycount { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+.cal-detail { margin-top: 12px; background: var(--surface-2); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 12px 14px; min-height: 50px; box-shadow: var(--shadow-sm); }
+.cal-detail-row { display: flex; gap: 8px; padding: 6px 0; border-top: 0.5px solid var(--border); }
+.cal-editrow { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 0; border-top: 0.5px solid var(--border); }
+.icon-btn { width: 28px; height: 28px; padding: 0; display: flex; align-items: center; justify-content: center; border-radius: 6px; background: var(--surface-2); cursor: pointer; font-family: var(--font-sans); }
 @media (max-width: 500px) {
   .form-row { grid-template-columns: 1fr; }
   .rep-grid { grid-template-columns: 1fr; }
@@ -197,13 +229,21 @@ textarea { resize: vertical; min-height: 64px; }
 
   <!-- 대시보드 -->
   <div class="section active" id="tab-dashboard">
-    <div class="metric-grid" id="summary-metrics"></div>
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:1rem;flex-wrap:wrap;">
-      <p class="section-title" style="margin:0;">월간 목표 현황</p>
-      <select id="dash-month" onchange="renderDashboard()" style="width:auto;padding:5px 8px;font-size:13px;"></select>
-      <button class="btn btn-ghost btn-sm" onclick="showTab('visit')"><i class="ti ti-plus"></i> 방문 추가</button>
+    <div class="dash-monthbar">
+      <button class="mnav-btn" onclick="dashShiftMonth(-1)" aria-label="이전 달"><i class="ti ti-chevron-left"></i></button>
+      <span class="month-label" id="dash-month-label">—</span>
+      <button class="mnav-btn" onclick="dashShiftMonth(1)" aria-label="다음 달"><i class="ti ti-chevron-right"></i></button>
+      <button class="mchip" onclick="dashGoThisMonth()">당월</button>
+      <button class="btn btn-ghost btn-sm" style="margin-left:auto;" onclick="showTab('visit')"><i class="ti ti-plus"></i> 방문 추가</button>
     </div>
+    <div class="metric-grid" id="summary-metrics"></div>
+    <p class="section-title">담당자별 진도율 <span style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--text-muted);">· 카드를 탭하면 아래 캘린더가 필터됩니다</span></p>
     <div class="rep-grid" id="rep-cards"></div>
+    <p class="section-title" style="margin-top:1.75rem;">방문 캘린더</p>
+    <div class="cal-chiprow" id="dash-cal-chips"></div>
+    <div class="cal-legend" id="dash-cal-legend"></div>
+    <div id="dash-calendar"></div>
+    <div class="cal-detail" id="dash-cal-detail"><div style="font-size:13px;color:var(--text-muted);">날짜를 탭하면 그날 방문 상세가 열립니다.</div></div>
   </div>
 
   <!-- 방문 기록 -->
@@ -461,6 +501,7 @@ textarea { resize: vertical; min-height: 64px; }
       <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
         <button class="btn btn-primary" onclick="saveSyncUrl()"><i class="ti ti-device-floppy"></i> URL 저장</button>
         <button class="btn btn-ghost" onclick="pullSharedVisits()"><i class="ti ti-refresh"></i> 팀 전체 데이터 불러오기</button>
+        <button class="btn btn-ghost" onclick="manualSyncGoals()"><i class="ti ti-upload"></i> 방문 계획 시트에 올리기</button>
       </div>
       <div id="sync-status" style="font-size:12px;color:var(--text-secondary);padding:8px 10px;background:var(--surface-1);border-radius:var(--radius);display:none;"></div>
     </div>
@@ -529,6 +570,165 @@ function saveData() {
   try { localStorage.setItem('keco_visits', JSON.stringify(visits)); } catch(e){ showToast('저장 공간 부족 — 일부 사진이 저장 안 될 수 있습니다.'); }
   try { localStorage.setItem('keco_goals', JSON.stringify(goals)); } catch(e){}
 }
+const PLAN_SEED={"2026-07":{"1":["2026-07-09|DS HYUNDAI KINTEX","2026-07-10|DS HYUNDAI CHEONHO","2026-07-15|DS HYUNDAI DAEGU","2026-07-15|DS HYUNDAI ULSAN","2026-07-16|DS LOTTE BUSAN","2026-07-16|TR LOTTE BUSAN","2026-07-23|DS LOTTE INCHEON","2026-07-24|DS HYUNDAI CHEONHO","2026-07-30|DS LOTTE INCHEON","2026-07-31|TR LOTTE WORLD TOWER","2026-07-31|DS LOTTE JAMSIL"],"6":["2026-07-09|TR SHILLA HDC","2026-07-09|TR SHILLA MAIN","2026-07-10|TR LOTTE MAIN","2026-07-15|TR SHILLA HDC","2026-07-15|TR SHILLA MAIN","2026-07-16|TR LOTTE MAIN","2026-07-23|TR SHILLA HDC","2026-07-23|TR SHILLA MAIN","2026-07-24|TR LOTTE MAIN","2026-07-30|TR LOTTE GIMHAE","2026-07-30|DS LOTTE CHANGWON","2026-07-31|TR JDC","2026-07-31|TR LOTTE JEJU","2026-07-31|TR SHILLA JEJU"],"2":["2026-07-09|DS SHINSEGAE GANGNAM","2026-07-10|DS SHINSEGAE HANAM","2026-07-15|DS SHINSEGAE GWANGJU","2026-07-16|DS SHINSEGAE UIJEONGBU","2026-07-23|DS SHINSEGAE CENTUMCITY","2026-07-24|DS AK SUWON","2026-07-30|TR SHINSEGAE MAIN","2026-07-30|DS SHINSEGAE MAIN","2026-07-31|DS SHINSEGAE GANGNAM"],"5":["2026-07-09|DS SHINSEGAE SOUTHCITY","2026-07-10|TR HYUNDAI COEX","2026-07-15|DS SHINSEGAE TIMESQUARE","2026-07-16|DS GALLERIA GWANGGYO","2026-07-23|TR SHINSEGAE MAIN","2026-07-23|DS SHINSEGAE MAIN","2026-07-24|DS SHINSEGAE SOUTHCITY","2026-07-30|DS SHINSEGAE DAEGU","2026-07-31|DS GALLERIA GWANGGYO"],"3":["2026-07-09|TR SHINSEGAE MAIN","2026-07-16|DS LOTTE JAMSIL","2026-07-23|TR HYUNDAI COEX","2026-07-30|DS HYUNDAI SEOUL"]},"2026-08":{"6":["2026-08-01|TR JDC","2026-08-06|TR SHILLA INCHEON T1","2026-08-06|TR SHINSEGAE INCHEON T1","2026-08-06|TR HYUNDAI INCHEON T1","2026-08-07|TR SHILLA INCHEON T2","2026-08-07|TR SHINSEGAE INCHEON T2 W","2026-08-13|TR SHILLA INCHEON T1","2026-08-13|TR SHINSEGAE INCHEON T1","2026-08-13|TR HYUNDAI INCHEON T1","2026-08-14|TR SHILLA INCHEON T2","2026-08-14|TR SHINSEGAE INCHEON T2 W","2026-08-20|TR SHILLA INCHEON T1","2026-08-20|TR SHINSEGAE INCHEON T1","2026-08-20|TR HYUNDAI INCHEON T1","2026-08-21|TR SHILLA INCHEON T2","2026-08-21|TR SHINSEGAE INCHEON T2 W","2026-08-27|TR SHILLA INCHEON T1","2026-08-27|TR SHINSEGAE INCHEON T1","2026-08-27|TR HYUNDAI INCHEON T1","2026-08-28|DS HYUNDAI DAEGU","2026-08-28|DS HYUNDAI ULSAN"],"1":["2026-08-06|TR LOTTE MAIN","2026-08-07|TR LOTTE WORLD TOWER","2026-08-07|DS LOTTE JAMSIL","2026-08-13|TR SHILLA MAIN","2026-08-14|DS HYUNDAI SEOUL","2026-08-20|TR LOTTE MAIN","2026-08-21|TR LOTTE WORLD TOWER","2026-08-21|DS LOTTE JAMSIL","2026-08-26|TR SHILLA MAIN","2026-08-27|TR LOTTE JEJU","2026-08-27|TR SHILLA JEJU","2026-08-28|TR JDC"],"2":["2026-08-06|TR HYUNDAI COEX","2026-08-07|DS SHINSEGAE TIMESQUARE","2026-08-13|DS SHINSEGAE GWANGJU","2026-08-14|TR SHILLA INCHEON T1","2026-08-14|TR SHINSEGAE INCHEON T1","2026-08-14|TR SHINSEGAE C. MAIN","2026-08-14|TR HYUNDAI INCHEON T1","2026-08-20|DS SHINSEGAE HANAM","2026-08-21|TR HYUNDAI COEX","2026-08-27|DS SHINSEGAE DAEJEON","2026-08-28|DS SHINSEGAE UIJEONGBU"],"5":["2026-08-06|TR SHILLA INCHEON T2","2026-08-06|TR SHINSEGAE INCHEON T2 W","2026-08-07|DS SHINSEGAE GANGNAM","2026-08-13|TR SHINSEGAE MAIN","2026-08-13|DS SHINSEGAE MAIN","2026-08-14|DS SHINSEGAE DAEJEON","2026-08-20|DS SHINSEGAE CENTUMCITY","2026-08-21|DS AK SUWON","2026-08-27|DS SHINSEGAE TIMESQUARE","2026-08-28|TR SHILLA INCHEON T1","2026-08-28|TR SHINSEGAE INCHEON T1","2026-08-28|TR SHINSEGAE C. MAIN","2026-08-28|TR HYUNDAI INCHEON T1"],"3":["2026-08-07|TR SHINSEGAE MAIN","2026-08-14|DS LOTTE JAMSIL","2026-08-20|TR HYUNDAI COEX","2026-08-28|DS HYUNDAI SEOUL"]},"2026-09":{"1":["2026-09-03|DS HYUNDAI SEOUL","2026-09-04|DS LOTTE INCHEON","2026-09-10|TR LOTTE GIMPO","2026-09-11|TR SHILLA HDC","2026-09-17|TR LOTTE MAIN","2026-09-18|DS LOTTE INCHEON","2026-09-22|TR SHILLA MAIN","2026-09-23|DS HYUNDAI SEOUL"],"6":["2026-09-03|TR SHILLA INCHEON T2","2026-09-03|TR SHINSEGAE INCHEON T2 W","2026-09-04|DS HYUNDAI KINTEX","2026-09-10|TR SHILLA INCHEON T2","2026-09-10|TR SHINSEGAE INCHEON T2 W","2026-09-11|DS HYUNDAI SEOUL"],"2":["2026-09-03|DS SHINSEGAE CENTUMCITY","2026-09-04|DS SHINSEGAE SOUTHCITY","2026-09-10|TR HYUNDAI COEX","2026-09-11|TR SHILLA INCHEON T2","2026-09-11|TR SHINSEGAE INCHEON T2 W","2026-09-17|TR SHINSEGAE MAIN","2026-09-18|DS SHINSEGAE SOUTHCITY","2026-09-22|DS SHINSEGAE GANGNAM","2026-09-23|DS GALLERIA GWANGGYO"],"5":["2026-09-03|DS SHINSEGAE GANGNAM","2026-09-04|TR HYUNDAI COEX","2026-09-10|TR SHINSEGAE MAIN","2026-09-11|DS GALLERIA GWANGGYO","2026-09-17|DS SHINSEGAE GANGNAM","2026-09-18|TR HYUNDAI COEX","2026-09-22|DS SHINSEGAE SOUTHCITY","2026-09-23|TR SHILLA INCHEON T1","2026-09-23|TR SHINSEGAE INCHEON T1","2026-09-23|TR SHINSEGAE C. MAIN","2026-09-23|TR HYUNDAI INCHEON T1"],"3":["2026-09-03|TR SHINSEGAE MAIN","2026-09-10|DS LOTTE JAMSIL","2026-09-17|TR HYUNDAI COEX","2026-09-22|DS HYUNDAI SEOUL"]}};
+const STORE_KO={"DS AK SUWON":"AK수원","DS GALLERIA GWANGGYO":"갤러리아광교","DS HYUNDAI CHEONHO":"현대천호","DS HYUNDAI DAEGU":"현대대구","DS HYUNDAI KINTEX":"현대킨텍스","DS HYUNDAI SEOUL":"더현대서울","DS HYUNDAI ULSAN":"현대울산","DS LOTTE BUSAN":"롯데부산","DS LOTTE CHANGWON":"롯데창원","DS LOTTE INCHEON":"롯데인천","DS LOTTE JAMSIL":"롯데잠실","DS SHINSEGAE CENTUMCITY":"신세계센텀","DS SHINSEGAE DAEGU":"신세계대구","DS SHINSEGAE DAEJEON":"신세계대전","DS SHINSEGAE GANGNAM":"신세계강남","DS SHINSEGAE GWANGJU":"신세계광주","DS SHINSEGAE HANAM":"신세계하남","DS SHINSEGAE MAIN":"신세계본점","DS SHINSEGAE SOUTHCITY":"신세계사우스시티","DS SHINSEGAE TIMESQUARE":"신세계영등포","DS SHINSEGAE UIJEONGBU":"신세계의정부","TR HYUNDAI COEX":"현대코엑스","TR HYUNDAI INCHEON T1":"현대인천T1","TR JDC":"JDC","TR LOTTE BUSAN":"롯데부산면세점","TR LOTTE GIMHAE":"롯데김해","TR LOTTE GIMPO":"롯데김포","TR LOTTE JEJU":"롯데제주","TR LOTTE MAIN":"롯데명동","TR LOTTE WORLD TOWER":"롯데월드","TR SHILLA HDC":"HDC","TR SHILLA INCHEON T1":"신라인천T1","TR SHILLA INCHEON T2":"신라인천T2","TR SHILLA JEJU":"신라제주","TR SHILLA MAIN":"신라메인","TR SHINSEGAE C. MAIN":"신세계인천탑승동","TR SHINSEGAE INCHEON T1":"신세계인천T1","TR SHINSEGAE INCHEON T2 W":"신세계인천T2","TR SHINSEGAE MAIN":"신세계명동"};
+
+/* ── 방문 계획(캘린더) 통합 ─────────────────────────────── */
+const KO_CHAINS = ['신세계','현대','롯데','신라','갤러리아','더현대'];
+function geMake(date, store){ return date ? date + '|' + store : store; }
+function geDate(e){ const i = e.indexOf('|'); return i >= 0 ? e.slice(0, i) : ''; }
+function geStore(e){ const i = e.indexOf('|'); return i >= 0 ? e.slice(i+1) : e; }
+function stChannel(k){ return k.indexOf('TR ') === 0 ? 'TR' : 'DS'; }
+function stCore(k){
+  const ko = STORE_KO[k];
+  if(ko){ for(const c of KO_CHAINS){ if(ko.indexOf(c)===0 && ko.length>c.length) return ko.slice(c.length); } return ko; }
+  return k.replace(/^(DS|TR) /,'');
+}
+function stFull(k){ const ko = STORE_KO[k]; return stChannel(k) + '·' + (ko || k.replace(/^(DS|TR) /,'')); }
+
+// 완료 판정: 해당 매장 그 달 방문로그 수만큼, 이른 날짜부터 완료 처리
+function doneIdxSet(rid, m){
+  const entries = getGoalStores(rid, m);
+  const byStore = {};
+  entries.forEach((e,i) => { const s = geStore(e); (byStore[s] = byStore[s] || []).push({ i, d: geDate(e) }); });
+  const done = new Set();
+  Object.keys(byStore).forEach(s => {
+    const arr = byStore[s].sort((a,b) => (a.d||'').localeCompare(b.d||''));
+    const vc = visits.filter(v => String(v.repId)===String(rid) && v.store===s && v.date && v.date.slice(0,7)===m).length;
+    for(let k=0; k<Math.min(vc, arr.length); k++) done.add(arr[k].i);
+  });
+  return done;
+}
+function plannedCount(rid, m){ return getGoalStores(rid, m).length; }
+function achievedCount(rid, m){ return doneIdxSet(rid, m).size; }
+
+// 월/날짜 유틸
+function ymShift(m, delta){ let [y,mo] = m.split('-').map(Number); mo += delta; while(mo<1){mo+=12;y--;} while(mo>12){mo-=12;y++;} return y+'-'+String(mo).padStart(2,'0'); }
+function ymLabel(m){ const [y,mo] = m.split('-'); return y+'년 '+Number(mo)+'월'; }
+function daysInMonth(m){ const [y,mo] = m.split('-').map(Number); return new Date(y, mo, 0).getDate(); }
+function firstDow(m){ const [y,mo] = m.split('-').map(Number); return (new Date(y, mo-1, 1).getDay()+6)%7; }
+function dateStr(m, d){ return m+'-'+String(d).padStart(2,'0'); }
+
+const DOW_HTML = '<div class="cal-dow"><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span style="color:var(--text-accent)">토</span><span style="color:var(--text-danger)">일</span></div>';
+const DONE_COLOR = '#4A8C2A', SOON_COLOR = '#A0A09C';
+const DS_BG = '#E6F1FB', DS_TX = '#185FA5', DS_DOT = '#378ADD';
+
+function storeOptionsHtml(){
+  const opt = k => '<option value="'+k+'">'+stChannel(k)+' · '+(STORE_KO[k]||k.replace(/^(DS|TR) /,''))+'</option>';
+  return '<option value="">＋ 매장 선택</option>'+
+    '<optgroup label="DS 백화점">'+STORES.DS.map(opt).join('')+'</optgroup>'+
+    '<optgroup label="TR 면세점">'+STORES.TR.map(opt).join('')+'</optgroup>';
+}
+
+// 확정 계획 시드 주입 (최초 1회, 기존 데이터는 보존·중복 제거)
+function seedPlanOnce(){
+  if(localStorage.getItem('keco_seed_v1')) return;
+  Object.keys(PLAN_SEED).forEach(m => {
+    if(!goals[m]) goals[m] = {};
+    Object.keys(PLAN_SEED[m]).forEach(rid => {
+      if(!Array.isArray(goals[m][rid])) goals[m][rid] = [];
+      PLAN_SEED[m][rid].forEach(e => { if(!goals[m][rid].includes(e)) goals[m][rid].push(e); });
+    });
+  });
+  localStorage.setItem('keco_seed_v1','1');
+  saveData();
+}
+
+/* ── 대시보드 캘린더 상태 ─────────────────────────────── */
+let dashMonth = thisMonth;
+let dashCalRep = '';
+let dashSelDate = '';
+function dashShiftMonth(d){ dashMonth = ymShift(dashMonth, d); renderDashboard(); }
+function dashGoThisMonth(){ dashMonth = thisMonth; renderDashboard(); }
+function selectDashRep(rid){ dashCalRep = String(rid)===String(dashCalRep) ? '' : String(rid); renderDashRepCards(); renderDashCalendar(); }
+function repColor(rid){ const r = REPS.find(x => String(x.id)===String(rid)); return r ? r.color : '#ccc'; }
+function repById(rid){ return REPS.find(x => String(x.id)===String(rid)); }
+
+function renderDashCalendar(){
+  const m = dashMonth;
+  const chipReps = [{id:'',name:'전체'}].concat(REPS.map(r => ({id:String(r.id), name:r.name})));
+  document.getElementById('dash-cal-chips').innerHTML = chipReps.map(c =>
+    '<button class="cal-chip'+(String(dashCalRep)===String(c.id)?' active':'')+'" onclick="dashCalRep=\''+c.id+'\';renderDashRepCards();renderDashCalendar();">'+c.name+'</button>').join('');
+  const teamMode = (dashCalRep === '');
+  document.getElementById('dash-cal-legend').innerHTML = teamMode
+    ? REPS.map(r => '<span><span class="dot" style="background:'+r.color+'"></span>'+r.name+'</span>').join('')
+    : '<span><span class="dot" style="background:'+DONE_COLOR+'"></span>완료</span><span><span class="dot" style="background:'+SOON_COLOR+'"></span>예정</span>';
+
+  const di = daysInMonth(m), off = firstDow(m);
+  const showReps = teamMode ? REPS.map(r=>String(r.id)) : [String(dashCalRep)];
+  const doneSets = {}; showReps.forEach(rid => doneSets[rid] = doneIdxSet(rid, m));
+  let cells = '';
+  for(let i=0;i<off;i++) cells += '<div class="cal-cell empty"></div>';
+  for(let d=1; d<=di; d++){
+    const ds = dateStr(m, d);
+    let inner = '<div class="cal-daynum">'+d+'</div>';
+    if(teamMode){
+      let dots='', cnt=0;
+      showReps.forEach(rid => {
+        getGoalStores(rid, m).forEach(e => { if(geDate(e)===ds){ cnt++; dots += '<span class="cal-repdot" style="background:'+repColor(rid)+'"></span>'; } });
+      });
+      if(cnt>0) inner += '<div class="cal-dotwrap">'+dots+'</div><div class="cal-daycount">'+cnt+'건</div>';
+    } else {
+      const rid = String(dashCalRep);
+      getGoalStores(rid, m).forEach((e,idx) => { if(geDate(e)===ds){ const done = doneSets[rid].has(idx);
+        inner += '<div class="cal-pill" style="background:'+(done?'var(--bg-success)':'var(--surface-1)')+';color:'+(done?'var(--text-success)':'var(--text-secondary)')+';border-left:3px solid '+(done?DONE_COLOR:SOON_COLOR)+';">'+stCore(geStore(e))+'</div>'; } });
+    }
+    const sel = dashSelDate===ds ? ' sel' : '';
+    cells += '<div class="cal-cell'+sel+'" onclick="dashSelDate=\''+ds+'\';renderDashCalendar();showDashDayDetail(\''+ds+'\');">'+inner+'</div>';
+  }
+  document.getElementById('dash-calendar').innerHTML = DOW_HTML + '<div class="cal-grid">'+cells+'</div>';
+}
+
+function showDashDayDetail(ds){
+  const m = dashMonth, box = document.getElementById('dash-cal-detail');
+  const teamMode = (dashCalRep === '');
+  const reps = teamMode ? REPS : [repById(dashCalRep)].filter(Boolean);
+  let rows = '';
+  reps.forEach(r => {
+    const done = doneIdxSet(r.id, m);
+    getGoalStores(r.id, m).forEach((e,idx) => { if(geDate(e)===ds){ const ok = done.has(idx);
+      rows += '<div class="cal-detail-row"><i class="ti ti-'+(ok?'circle-check':'circle')+'" style="font-size:16px;color:'+(ok?'var(--text-success)':'var(--text-muted)')+';margin-top:1px;"></i><div><span style="font-size:12px;font-weight:600;">'+r.name+'</span><div style="font-size:12px;color:var(--text-secondary);">'+stFull(geStore(e))+'</div></div></div>'; } });
+  });
+  const p = ds.split('-');
+  box.innerHTML = rows ? '<div style="font-size:13px;font-weight:600;margin-bottom:2px;">'+Number(p[1])+'월 '+Number(p[2])+'일</div>'+rows
+    : '<div style="font-size:13px;color:var(--text-muted);">'+Number(p[1])+'월 '+Number(p[2])+'일 · 계획된 방문이 없습니다.</div>';
+}
+
+/* ── 목표설정(개인 편집 캘린더) 상태 ───────────────────── */
+let goalMonth = (thisMonth >= '2026-07' && thisMonth <= '2026-09') ? thisMonth : '2026-07';
+let goalSelDate = '';
+function goalShiftMonth(d){ goalMonth = ymShift(goalMonth, d); renderGoalSettings(); }
+function goalGoMonth(m){ goalMonth = m; renderGoalSettings(); }
+
+function goalEditorHtml(rid, m, ds){
+  if(!ds) return '<div style="font-size:13px;color:var(--text-muted);padding:8px 2px 2px;">날짜를 탭해 매장을 추가·삭제하세요.</div>';
+  const es = getGoalStores(rid, m), rows = [];
+  es.forEach((e,idx) => { if(geDate(e)===ds) rows.push({ e, idx }); });
+  const p = ds.split('-');
+  let h = '<div style="background:var(--surface-1);border:0.5px solid var(--border);border-radius:var(--radius);padding:12px;margin-top:12px;">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;"><span style="font-size:13px;font-weight:600;">'+Number(p[1])+'월 '+Number(p[2])+'일 계획</span><span style="font-size:11px;color:var(--text-muted);">'+rows.length+'건</span></div>';
+  rows.forEach(({e,idx}) => { h += '<div class="cal-editrow"><span style="font-size:13px;">'+stFull(geStore(e))+'</span><button class="icon-btn" style="border:0.5px solid var(--border-danger);color:var(--text-danger);" onclick="goalRemoveEntry(\''+m+'\','+idx+')" aria-label="삭제"><i class="ti ti-trash" style="font-size:15px;"></i></button></div>'; });
+  h += '<div style="display:flex;gap:6px;margin-top:10px;padding-top:10px;border-top:0.5px solid var(--border);"><select id="goal-add-sel" style="flex:1;font-size:12px;padding:6px 8px;">'+storeOptionsHtml()+'</select><button class="btn btn-primary btn-sm" onclick="goalAddEntry(\''+m+'\',\''+ds+'\')"><i class="ti ti-plus"></i> 추가</button></div></div>';
+  return h;
+}
+
+function goalAddEntry(m, ds){
+  const myId = getCurrentRepId(); if(!myId) return;
+  const sel = document.getElementById('goal-add-sel'); const k = sel ? sel.value : ''; if(!k) return;
+  const rid = String(myId);
+  if(!goals[m]) goals[m] = {};
+  if(!Array.isArray(goals[m][rid])) goals[m][rid] = [];
+  const entry = geMake(ds, k);
+  if(!goals[m][rid].includes(entry)){ goals[m][rid].push(entry); saveData(); syncGoalsToSheet(true); }
+  goalSelDate = ds; renderGoalSettings(); renderDashboard();
+}
+function goalRemoveEntry(m, idx){
+  const myId = String(getCurrentRepId());
+  if(!goals[m] || !Array.isArray(goals[m][myId])) return;
+  goals[m][myId].splice(idx, 1); saveData(); syncGoalsToSheet(true);
+  renderGoalSettings(); renderDashboard();
+}
+
 
 function getMonths() {
   const s = new Set([thisMonth]);
@@ -538,7 +738,7 @@ function getMonths() {
 
 function populateMonthSelects() {
   const months = getMonths();
-  ['dash-month','filter-month'].forEach(id => {
+  ['filter-month'].forEach(id => {
     const el = document.getElementById(id); if(!el) return;
     const cur = el.value || thisMonth;
     el.innerHTML = months.map(m => `<option value="${m}"${m===cur?' selected':''}>${m}</option>`).join('');
@@ -576,43 +776,45 @@ function statusBadge(pct) {
 }
 
 function renderDashboard() {
-  const month = document.getElementById('dash-month').value || thisMonth;
-  let totalGoalStores = 0, totalAchieved = 0, doneFull = 0, urgent = 0;
+  const month = dashMonth;
+  const lbl = document.getElementById('dash-month-label');
+  if(lbl) lbl.textContent = ymLabel(month);
+  let totalPlanned = 0, totalDone = 0, doneFull = 0, urgent = 0;
   REPS.forEach(r => {
-    const gs = getGoalStores(r.id, month);
-    const ac = getAchievedStores(r.id, month);
-    totalGoalStores += gs.length;
-    totalAchieved += ac.length;
-    if (gs.length > 0 && ac.length >= gs.length) doneFull++;
+    const p = plannedCount(r.id, month), a = achievedCount(r.id, month);
+    totalPlanned += p; totalDone += a;
+    if(p > 0 && a >= p) doneFull++;
     repVisitsInMonth(r.id, month).forEach(v => { if(v.urgent) urgent++; });
   });
-  const overallPct = totalGoalStores > 0 ? Math.round(totalAchieved / totalGoalStores * 100) : 0;
+  const overallPct = totalPlanned > 0 ? Math.round(totalDone / totalPlanned * 100) : 0;
   document.getElementById('summary-metrics').innerHTML = `
-    <div class="metric"><div class="metric-label">목표 매장 수</div><div class="metric-value">${totalGoalStores}</div><div class="metric-sub">팀 전체 ${month}</div></div>
-    <div class="metric"><div class="metric-label">전체 달성률</div><div class="metric-value">${overallPct}%</div><div class="metric-sub">${totalAchieved}/${totalGoalStores} 매장</div></div>
+    <div class="metric"><div class="metric-label">계획 방문</div><div class="metric-value">${totalPlanned}</div><div class="metric-sub">팀 전체 ${month}</div></div>
+    <div class="metric"><div class="metric-label">전체 진도율</div><div class="metric-value">${overallPct}%</div><div class="metric-sub">${totalDone}/${totalPlanned}건 완료</div></div>
     <div class="metric"><div class="metric-label">목표 달성 사원</div><div class="metric-value">${doneFull}명</div><div class="metric-sub">전체 ${REPS.length}명</div></div>
     <div class="metric"><div class="metric-label">긴급 이슈</div><div class="metric-value" style="color:${urgent>0?'var(--text-danger)':'inherit'}">${urgent}건</div><div class="metric-sub">이번 달</div></div>
   `;
+  renderDashRepCards();
+  renderDashCalendar();
+  if(dashSelDate && dashSelDate.slice(0,7) === month) showDashDayDetail(dashSelDate);
+  else document.getElementById('dash-cal-detail').innerHTML = '<div style="font-size:13px;color:var(--text-muted);">날짜를 탭하면 그날 방문 상세가 열립니다.</div>';
+}
+
+function renderDashRepCards() {
+  const month = dashMonth;
   document.getElementById('rep-cards').innerHTML = REPS.map(r => {
-    const gs = getGoalStores(r.id, month);
-    const ac = getAchievedStores(r.id, month);
+    const cnt = plannedCount(r.id, month), done = achievedCount(r.id, month);
     const rv = repVisitsInMonth(r.id, month);
-    const cnt = gs.length, done = ac.length;
     const pct = cnt > 0 ? Math.min(100, Math.round(done / cnt * 100)) : 0;
     const pc = rv.reduce((s,v)=>s+(v.photos?v.photos.length:0),0);
     const uc = rv.filter(v=>v.urgent).length;
     const fc = pct>=100?'var(--fill-success)':pct>=60?'var(--fill-warning)':'var(--fill-danger)';
-    const storeList = cnt === 0
-      ? `<div style="font-size:11px;color:var(--text-muted);margin-top:6px;">목표 매장 미설정</div>`
-      : `<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:4px;">
-          ${gs.map(s => {
-            const hit = ac.includes(s);
-            return `<span style="font-size:11px;padding:2px 7px;border-radius:10px;background:${hit?'var(--fill-success)':'rgba(255,255,255,0.07)'};color:${hit?'#fff':'var(--text-muted)'};text-decoration:${hit?'none':'none'};display:flex;align-items:center;gap:3px;">
-              ${hit?'<i class="ti ti-check" style="font-size:10px;"></i>':''} ${s.replace(/^(DS|TR) /,'')}
-            </span>`;
-          }).join('')}
-        </div>`;
-    return `<div class="rep-card">
+    let dsN = 0, trN = 0;
+    getGoalStores(r.id, month).forEach(e => { stChannel(geStore(e))==='TR' ? trN++ : dsN++; });
+    const active = String(dashCalRep)===String(r.id) ? ' active' : '';
+    const breakdown = cnt > 0
+      ? `<div style="margin-top:8px;font-size:11px;color:var(--text-muted);">DS ${dsN} · TR ${trN}${uc>0?` · <span style="color:var(--text-danger)">긴급 ${uc}</span>`:''}${pc>0?` · 사진 ${pc}`:''}</div>`
+      : `<div style="font-size:11px;color:var(--text-muted);margin-top:6px;">이번 달 계획 없음</div>`;
+    return `<div class="rep-card selectable${active}" onclick="selectDashRep(${r.id})">
       <div class="rep-header">
         <div class="avatar" style="background:${r.color};color:${r.textColor}">${r.initials}</div>
         <div><div class="rep-name">${r.name}</div></div>
@@ -620,14 +822,10 @@ function renderDashboard() {
       </div>
       <div class="progress-row">
         <div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:${fc}"></div></div>
-        <span style="font-size:12px;font-weight:500;min-width:52px;text-align:right;">${done}/${cnt} 매장</span>
+        <span style="font-size:12px;font-weight:500;min-width:52px;text-align:right;">${done}/${cnt} 건</span>
       </div>
-      <div style="margin-top:4px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-        <span style="font-size:12px;color:var(--text-muted);">${pct}% 달성</span>
-        ${pc>0?`<span class="photo-badge"><i class="ti ti-camera" style="font-size:11px;"></i>${pc}장</span>`:''}
-        ${uc>0?`<span class="issue-badge"><i class="ti ti-alert-triangle" style="font-size:11px;"></i>${uc}건</span>`:''}
-      </div>
-      ${storeList}
+      <div style="margin-top:4px;font-size:12px;color:var(--text-muted);">${pct}% 진행</div>
+      ${breakdown}
     </div>`;
   }).join('');
 }
@@ -1008,73 +1206,57 @@ function closeLightbox() { document.getElementById('lightbox').classList.remove(
 function closeLightboxBg(e) { if(e.target===document.getElementById('lightbox')) closeLightbox(); }
 
 function renderGoalSettings() {
-  const storeOptions = `<option value="">＋ 매장 추가</option>` +
-    `<optgroup label="DS">` +
-    STORES.DS.map(s=>`<option value="${s}">${s}</option>`).join('') +
-    `</optgroup>` +
-    `<optgroup label="TR">` +
-    STORES.TR.map(s=>`<option value="${s}">${s}</option>`).join('') +
-    `</optgroup>`;
-
-  document.getElementById('goal-settings').innerHTML = `
-    <p style="font-size:12px;color:var(--text-muted);margin-bottom:16px;">${thisMonth} 방문 목표 매장을 설정하세요. 드롭다운에서 매장을 선택하면 추가됩니다.</p>
-    ${REPS.map(r => {
-      const gs = getGoalStores(r.id, thisMonth);
-      const achieved = getAchievedStores(r.id, thisMonth);
-      return `
-      <div style="margin-bottom:20px;padding-bottom:20px;border-bottom:0.5px solid var(--border);">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
-          <div class="avatar" style="background:${r.color};color:${r.textColor};width:28px;height:28px;font-size:11px;flex-shrink:0;">${r.initials}</div>
-          <input type="text" value="${r.name}" style="width:80px;flex-shrink:0;font-size:13px;padding:4px 8px;" onchange="renameRep(${r.id},this.value)" />
-          <span style="font-size:11px;color:var(--text-muted);">${achieved.length}/${gs.length} 달성</span>
-          <button class="btn btn-ghost btn-sm" style="margin-left:auto;" onclick="removeRep(${r.id})"><i class="ti ti-trash" style="font-size:13px;"></i></button>
-        </div>
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-          <select style="font-size:12px;padding:5px 8px;flex:1;max-width:220px;"
-            onchange="if(this.value){addGoalStore(${r.id},'${thisMonth}',this.value);this.value='';}">
-            ${storeOptions}
-          </select>
-        </div>
-        <div id="goal-chips-${r.id}" style="display:flex;flex-wrap:wrap;gap:6px;min-height:28px;">
-          ${gs.map((s,i) => {
-            const done = achieved.includes(s);
-            return `<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:3px 10px 3px 10px;border-radius:99px;
-              background:${done?'var(--bg-success)':'var(--surface-1)'};
-              color:${done?'var(--text-success)':'var(--text-secondary)'};
-              border:0.5px solid ${done?'var(--fill-success)':'var(--border)'};white-space:nowrap;">
-              ${done?'<i class="ti ti-check" style="font-size:10px;"></i>':''} ${s.replace(/^(DS|TR) /,'')}
-              <button onclick="removeGoalStore(${r.id},'${thisMonth}',${i})" style="background:none;border:none;cursor:pointer;color:inherit;padding:0;margin-left:2px;font-size:13px;line-height:1;opacity:0.6;">×</button>
-            </span>`;
-          }).join('')}
-          ${gs.length===0?`<span style="font-size:11px;color:var(--text-muted);font-style:italic;">목표 매장 없음</span>`:''}
-        </div>
-      </div>`;
-    }).join('')}
-    <div style="display:flex;gap:8px;align-items:center;margin-top:4px;">
-      <input type="text" id="new-rep-name" placeholder="새 영업사원 이름" style="flex:1;font-size:13px;" onkeydown="if(event.key==='Enter') addRep();" />
-      <button class="btn btn-primary btn-sm" onclick="addRep()"><i class="ti ti-plus"></i> 추가</button>
-    </div>`;
-}
-
-function addGoalStore(rid, m, storeName) {
-  if (!goals[m]) goals[m] = {};
-  if (!Array.isArray(goals[m][rid])) goals[m][rid] = [];
-  if (!goals[m][rid].includes(storeName)) {
-    goals[m][rid].push(storeName);
-    saveData();
-    syncGoalsToSheet(true);
-    renderGoalSettings();
-    renderDashboard();
+  const box = document.getElementById('goal-settings');
+  const myId = getCurrentRepId();
+  const me = repById(myId);
+  if(!me){
+    box.innerHTML = '<div style="text-align:center;padding:1.5rem 0;"><div style="font-size:13px;color:var(--text-secondary);margin-bottom:12px;">본인을 먼저 선택하면 개인 방문 계획을 편집할 수 있습니다.</div><button class="btn btn-primary btn-sm" onclick="showUserModal()"><i class="ti ti-user"></i> 본인 선택</button></div>';
+    return;
   }
-}
+  const m = goalMonth;
+  const es = getGoalStores(myId, m);
+  const done = doneIdxSet(myId, m);
 
-function removeGoalStore(rid, m, idx) {
-  if (!goals[m] || !Array.isArray(goals[m][rid])) return;
-  goals[m][rid].splice(idx, 1);
-  saveData();
-  syncGoalsToSheet(true);
-  renderGoalSettings();
-  renderDashboard();
+  let html = ''
+  + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">'
+  +   '<div class="avatar" style="background:'+me.color+';color:'+me.textColor+';width:30px;height:30px;font-size:11px;">'+me.initials+'</div>'
+  +   '<div style="flex:1;"><div style="font-size:14px;font-weight:600;">'+me.name+' 님의 방문 계획</div><div style="font-size:11px;color:var(--text-muted);">'+es.length+'건 · 완료 '+done.size+'건</div></div>'
+  +   '<span style="font-size:11px;padding:3px 8px;border-radius:99px;background:var(--bg-warning);color:var(--text-warning);"><i class="ti ti-edit" style="font-size:12px;"></i> 편집</span>'
+  + '</div>'
+  + '<div style="display:flex;align-items:center;gap:6px;justify-content:center;margin:6px 0 10px;">'
+  +   '<button class="mnav-btn" onclick="goalShiftMonth(-1)" aria-label="이전 달"><i class="ti ti-chevron-left"></i></button>'
+  +   '<span class="month-label">'+ymLabel(m)+'</span>'
+  +   '<button class="mnav-btn" onclick="goalShiftMonth(1)" aria-label="다음 달"><i class="ti ti-chevron-right"></i></button>'
+  + '</div>'
+  + '<div style="display:flex;gap:6px;justify-content:center;margin-bottom:12px;flex-wrap:wrap;">'
+  +   ['2026-07','2026-08','2026-09'].map(function(mm){ return '<button class="mchip" style="'+(mm===m?'background:var(--text-primary);color:#fff;border-color:transparent;':'')+'" onclick="goalGoMonth(\''+mm+'\')">'+ymLabel(mm)+'</button>'; }).join('')
+  + '</div>';
+
+  const di = daysInMonth(m), off = firstDow(m);
+  let cells = '';
+  for(let i=0;i<off;i++) cells += '<div class="cal-cell empty"></div>';
+  for(let d=1; d<=di; d++){
+    const ds = dateStr(m, d);
+    const dayEntries = [];
+    es.forEach(function(e){ if(geDate(e)===ds) dayEntries.push(e); });
+    let inner = '<div class="cal-daynum'+(dayEntries.length?' on':'')+'">'+d+'</div>';
+    dayEntries.forEach(function(e){ const tr = stChannel(geStore(e))==='TR';
+      inner += '<div class="cal-pill" style="background:'+(tr?'var(--bg-success)':DS_BG)+';color:'+(tr?'var(--text-success)':DS_TX)+';">'+stCore(geStore(e))+'</div>'; });
+    const sel = goalSelDate===ds ? ' sel' : '';
+    cells += '<div class="cal-cell editable'+sel+'" onclick="goalSelDate=\''+ds+'\';renderGoalSettings();">'+inner+'</div>';
+  }
+  html += DOW_HTML + '<div class="cal-grid">'+cells+'</div>';
+  html += '<div class="cal-legend" style="margin-top:10px;"><span><span class="dot" style="background:'+DS_DOT+'"></span>DS</span><span><span class="dot" style="background:'+DONE_COLOR+'"></span>TR</span><span style="color:var(--text-muted);">날짜를 탭해 추가·삭제</span></div>';
+  html += goalEditorHtml(myId, m, goalSelDate);
+
+  html += '<details style="margin-top:22px;border-top:0.5px solid var(--border);padding-top:14px;">'
+    + '<summary style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);cursor:pointer;">팀원 관리</summary>'
+    + '<div style="margin-top:12px;">'
+    + REPS.map(function(r){ return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><div class="avatar" style="background:'+r.color+';color:'+r.textColor+';width:26px;height:26px;font-size:10px;">'+r.initials+'</div><input type="text" value="'+r.name+'" style="width:120px;font-size:13px;padding:4px 8px;" onchange="renameRep('+r.id+',this.value)" /><button class="btn btn-ghost btn-sm" style="margin-left:auto;" onclick="removeRep('+r.id+')"><i class="ti ti-trash" style="font-size:13px;"></i></button></div>'; }).join('')
+    + '<div style="display:flex;gap:8px;align-items:center;margin-top:10px;"><input type="text" id="new-rep-name" placeholder="새 영업사원 이름" style="flex:1;font-size:13px;" onkeydown="if(event.key===\'Enter\')addRep();" /><button class="btn btn-primary btn-sm" onclick="addRep()"><i class="ti ti-plus"></i> 추가</button></div>'
+    + '</div></details>';
+
+  box.innerHTML = html;
 }
 
 // 구글시트에서 불러온 날짜를 KST 기준 YYYY-MM-DD로 정규화
@@ -1414,6 +1596,7 @@ function setRepToCurrentUser() {
 }
 
 function init() {
+  seedPlanOnce();
   renderRepSelects();
   onChannelChange();
   populateMonthSelects();
