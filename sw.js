@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kering-visit-v4';
+const CACHE_NAME = 'kering-visit-v5';
 const STATIC_ASSETS = [
   './manifest.json',
   './icon-192.png',
@@ -38,9 +38,9 @@ self.addEventListener('fetch', event => {
       url.pathname.endsWith('/') ||
       url.pathname.endsWith('.html')) {
     event.respondWith(
-      fetch(event.request)
+      fetch(event.request, { cache: 'reload' })
         .then(response => {
-          // 최신 버전을 캐시에도 저장
+          // 최신 버전을 캐시에도 저장 (온라인일 때 항상 최신 HTML)
           const clone = response.clone();
           caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
           return response;
