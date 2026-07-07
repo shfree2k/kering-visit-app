@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kering-visit-v5';
+const CACHE_NAME = 'kering-visit-v7';
 const STATIC_ASSETS = [
   './manifest.json',
   './icon-192.png',
