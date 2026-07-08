@@ -51,6 +51,22 @@ body { font-family: var(--font-sans); background: var(--surface-0); color: var(-
 .metric-value { font-size: 28px; font-weight: 300; letter-spacing: -0.02em; }
 .metric-sub { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
 .rep-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.metric-strip { display: flex; background: var(--surface-2); border: 0.5px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); margin-bottom: 1.5rem; overflow: hidden; }
+.metric-strip .metric { flex: 1; min-width: 0; background: none; border: none; border-left: 0.5px solid var(--border); border-radius: 0; box-shadow: none; padding: 0.95rem 0.9rem; }
+.metric-strip .metric:first-child { border-left: none; }
+.metric-strip .metric-label { margin-bottom: 6px; }
+.metric-strip .metric-value { font-size: 22px; }
+.metric-strip .metric-sub { margin-top: 3px; }
+.rep-bars { display: flex; align-items: flex-end; gap: 6px; padding: 6px 2px 2px; }
+.rep-bar-col { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; cursor: pointer; padding: 6px 2px; border-radius: var(--radius); transition: background 0.15s; }
+.rep-bar-col:hover { background: var(--surface-1); }
+.rep-bar-col.active { background: var(--surface-1); }
+.rep-bar-pct { font-size: 12px; font-weight: 600; margin-bottom: 6px; letter-spacing: -0.01em; }
+.rep-bar-track { width: 100%; max-width: 38px; height: 120px; background: var(--surface-1); border-radius: 6px; display: flex; align-items: flex-end; overflow: hidden; }
+.rep-bar-fill { width: 100%; border-radius: 6px 6px 0 0; min-height: 3px; transition: height 0.4s ease; }
+.rep-bar-col.active .rep-bar-track { box-shadow: inset 0 0 0 1.5px var(--text-primary); }
+.rep-bar-avatar { margin-top: 10px; }
+.rep-bar-count { font-size: 11px; font-weight: 500; color: var(--text-secondary); margin-top: 5px; }
 .rep-card { background: var(--surface-2); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1.1rem 1.25rem; box-shadow: var(--shadow-sm); transition: box-shadow 0.2s; }
 .rep-card:hover { box-shadow: var(--shadow-md); }
 .rep-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
@@ -164,6 +180,12 @@ textarea { resize: vertical; min-height: 64px; }
   .form-row { grid-template-columns: 1fr; }
   .rep-grid { grid-template-columns: 1fr; }
   .metric-grid { grid-template-columns: 1fr 1fr; }
+  .metric-strip .metric { padding: 0.85rem 0.6rem; }
+  .metric-strip .metric-value { font-size: 19px; }
+  .metric-strip .metric-label { font-size: 9px; letter-spacing: 0.04em; }
+  .metric-strip .metric-sub { font-size: 10px; }
+  .rep-bars { gap: 3px; }
+  .rep-bar-track { height: 104px; }
   .app-logo { height: 42px; }
 }
 </style>
@@ -236,9 +258,9 @@ textarea { resize: vertical; min-height: 64px; }
       <button class="mchip" onclick="dashGoThisMonth()">당월</button>
       <button class="btn btn-ghost btn-sm" style="margin-left:auto;" onclick="showTab('visit')"><i class="ti ti-plus"></i> 방문 추가</button>
     </div>
-    <div class="metric-grid" id="summary-metrics"></div>
-    <p class="section-title">담당자별 진도율 <span style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--text-muted);">· 카드를 탭하면 아래 캘린더가 필터됩니다</span></p>
-    <div class="rep-grid" id="rep-cards"></div>
+    <div class="metric-strip" id="summary-metrics"></div>
+    <p class="section-title">담당자별 진도율 <span style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--text-muted);">· 막대를 탭하면 아래 캘린더가 필터됩니다</span></p>
+    <div class="rep-bars" id="rep-cards"></div>
     <p class="section-title" style="margin-top:1.75rem;">방문 캘린더</p>
     <div class="cal-chiprow" id="dash-cal-chips"></div>
     <div class="cal-legend" id="dash-cal-legend"></div>
@@ -806,18 +828,23 @@ function renderDashboard() {
   const month = dashMonth;
   const lbl = document.getElementById('dash-month-label');
   if(lbl) lbl.textContent = ymLabel(month);
-  let totalPlanned = 0, totalDone = 0, doneFull = 0, urgent = 0;
+  let dsP = 0, dsD = 0, trP = 0, trD = 0, doneFull = 0, urgent = 0;
   REPS.forEach(r => {
-    const p = plannedCount(r.id, month), a = achievedCount(r.id, month);
-    totalPlanned += p; totalDone += a;
-    if(p > 0 && a >= p) doneFull++;
+    const entries = getGoalStores(r.id, month);
+    const doneSet = doneIdxSet(r.id, month);
+    entries.forEach((e, i) => {
+      if(stChannel(geStore(e)) === 'TR') { trP++; if(doneSet.has(i)) trD++; }
+      else { dsP++; if(doneSet.has(i)) dsD++; }
+    });
+    if(entries.length > 0 && doneSet.size >= entries.length) doneFull++;
     repVisitsInMonth(r.id, month).forEach(v => { if(v.urgent) urgent++; });
   });
-  const overallPct = totalPlanned > 0 ? Math.round(totalDone / totalPlanned * 100) : 0;
+  const dsPct = dsP > 0 ? Math.round(dsD / dsP * 100) : 0;
+  const trPct = trP > 0 ? Math.round(trD / trP * 100) : 0;
   document.getElementById('summary-metrics').innerHTML = `
-    <div class="metric"><div class="metric-label">계획 방문</div><div class="metric-value">${totalPlanned}</div><div class="metric-sub">팀 전체 ${month}</div></div>
-    <div class="metric"><div class="metric-label">전체 진도율</div><div class="metric-value">${overallPct}%</div><div class="metric-sub">${totalDone}/${totalPlanned}건 완료</div></div>
-    <div class="metric"><div class="metric-label">목표 달성 사원</div><div class="metric-value">${doneFull}명</div><div class="metric-sub">전체 ${REPS.length}명</div></div>
+    <div class="metric"><div class="metric-label">DS 방문</div><div class="metric-value">${dsD}/${dsP}</div><div class="metric-sub">백화점 ${dsPct}%</div></div>
+    <div class="metric"><div class="metric-label">TR 방문</div><div class="metric-value">${trD}/${trP}</div><div class="metric-sub">면세점 ${trPct}%</div></div>
+    <div class="metric"><div class="metric-label">목표 달성</div><div class="metric-value">${doneFull}명</div><div class="metric-sub">전체 ${REPS.length}명</div></div>
     <div class="metric"><div class="metric-label">긴급 이슈</div><div class="metric-value" style="color:${urgent>0?'var(--text-danger)':'inherit'}">${urgent}건</div><div class="metric-sub">이번 달</div></div>
   `;
   renderDashRepCards();
@@ -830,29 +857,14 @@ function renderDashRepCards() {
   const month = dashMonth;
   document.getElementById('rep-cards').innerHTML = REPS.map(r => {
     const cnt = plannedCount(r.id, month), done = achievedCount(r.id, month);
-    const rv = repVisitsInMonth(r.id, month);
     const pct = cnt > 0 ? Math.min(100, Math.round(done / cnt * 100)) : 0;
-    const pc = rv.reduce((s,v)=>s+(v.photos?v.photos.length:0),0);
-    const uc = rv.filter(v=>v.urgent).length;
-    const fc = pct>=100?'var(--fill-success)':pct>=60?'var(--fill-warning)':'var(--fill-danger)';
-    let dsN = 0, trN = 0;
-    getGoalStores(r.id, month).forEach(e => { stChannel(geStore(e))==='TR' ? trN++ : dsN++; });
     const active = String(dashCalRep)===String(r.id) ? ' active' : '';
-    const breakdown = cnt > 0
-      ? `<div style="margin-top:8px;font-size:11px;color:var(--text-muted);">DS ${dsN} · TR ${trN}${uc>0?` · <span style="color:var(--text-danger)">긴급 ${uc}</span>`:''}${pc>0?` · 사진 ${pc}`:''}</div>`
-      : `<div style="font-size:11px;color:var(--text-muted);margin-top:6px;">이번 달 계획 없음</div>`;
-    return `<div class="rep-card selectable${active}" onclick="selectDashRep(${r.id})">
-      <div class="rep-header">
-        <div class="avatar" style="background:${r.color};color:${r.textColor}">${r.initials}</div>
-        <div><div class="rep-name">${r.name}</div></div>
-        ${statusBadge(pct)}
-      </div>
-      <div class="progress-row">
-        <div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:${fc}"></div></div>
-        <span style="font-size:12px;font-weight:500;min-width:52px;text-align:right;">${done}/${cnt} 건</span>
-      </div>
-      <div style="margin-top:4px;font-size:12px;color:var(--text-muted);">${pct}% 진행</div>
-      ${breakdown}
+    const barH = cnt > 0 ? Math.max(3, Math.round(pct * 1.2)) : 3;
+    return `<div class="rep-bar-col${active}" onclick="selectDashRep(${r.id})">
+      <div class="rep-bar-pct" style="color:${r.textColor}">${cnt>0?pct+'%':'—'}</div>
+      <div class="rep-bar-track"><div class="rep-bar-fill" style="height:${barH}px;background:${r.color}"></div></div>
+      <div class="avatar rep-bar-avatar" style="background:${r.color};color:${r.textColor}">${r.initials}</div>
+      <div class="rep-bar-count">${done}/${cnt}</div>
     </div>`;
   }).join('');
 }
