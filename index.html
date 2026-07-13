@@ -721,7 +721,7 @@ function seedPlan(){
   localStorage.setItem('keco_seed_v3','1');
   saveData();
   _skipGoalPullOnce = true;                       // 이번 세션 최초 pull이 확정계획을 덮지 않도록
-  if(getSyncUrl()) { try { syncGoalsToSheet(true); } catch(e){} }  // 시트도 확정계획으로 1회 교정
+  if(getSyncUrl()) { try { pushSeedGoals(); } catch(e){} }  // 시트도 확정계획으로 1회 교정(사원별 병합)
 }
 
 /* ── 대시보드 캘린더 상태 ─────────────────────────────── */
@@ -1580,7 +1580,7 @@ function pendingVisitIds(){
   outbox.forEach(it => { if(it.payload && it.payload.id != null) set.add(String(it.payload.id)); });
   return set;
 }
-function goalsPending(){ return outbox.some(it => it.kind === 'goals'); }
+function goalsPending(){ return outbox.some(it => it.kind === 'goals' || it.kind === 'goals-bulk'); }
 
 function flushOutbox(){
   if(_flushing || !outbox.length) return Promise.resolve();
@@ -1592,8 +1592,8 @@ function flushOutbox(){
     if(!outbox.length) return Promise.resolve();
     const item = outbox[0];
     item._inflight = true;
-    // 목표는 큐에 담긴 시점이 아니라 '전송하는 순간'의 최신 상태를 보낸다
-    const body = (item.kind === 'goals') ? { type: 'goals', goals: goals } : item.payload;
+    // 목표는 큐에 담긴 시점이 아니라 '전송하는 순간'의 최신 내 슬라이스를 보낸다
+    const body = (item.kind === 'goals') ? goalsSendBody() : item.payload;
     return postJSON(body).then(data => {
       if(!data || data.result !== 'success') throw new Error((data && data.message) || '서버가 실패를 반환했습니다.');
       _syncError = '';
@@ -1673,11 +1673,44 @@ function setSyncStatus(msg, isError) {
   el.textContent = msg;
 }
 
+// 현재 로그인한 사원의 월별 목표만 뽑아낸다. { repId, months:{ '2026-07':[...], ... } }
+// 빈 배열도 그대로 담아 '그 달 목표를 모두 지움'을 서버에 전달한다.
+function myGoalsSlice(){
+  const myId = String(getCurrentRepId() || '');
+  const months = {};
+  if(myId){
+    Object.keys(goals).forEach(m => {
+      const slice = goals[m] && goals[m][myId];
+      months[m] = Array.isArray(slice) ? slice.slice() : [];
+    });
+  }
+  return { repId: myId, months: months };
+}
+function goalsSendBody(){
+  const s = myGoalsSlice();
+  const rep = REPS.find(r => String(r.id) === String(s.repId));
+  return { type: 'goals', repId: s.repId, repName: rep ? rep.name : '', months: s.months };
+}
+
 function syncGoalsToSheet(silent) {
   _goalsChangedAt = Date.now();          // 진행 중인 pull 이 이 변경을 덮어쓰지 못하게
   if(!getSyncUrl()) return;
   if(!silent) setSyncStatus('목표 매장 업로드 중...');
-  enqueue('goals', { type: 'goals', goals: goals }, !silent);
+  // 내 슬라이스만 전송 → 서버는 다른 사원 목표를 건드리지 않고 내 것만 병합
+  enqueue('goals', goalsSendBody(), !silent);
+}
+
+// 초기 확정계획(여러 사원)을 한 번에 병합 전송. seedPlan 에서만 사용.
+function pushSeedGoals(){
+  if(!getSyncUrl()) return;
+  const reps = {};
+  Object.keys(PLAN_SEED).forEach(m => {
+    Object.keys(PLAN_SEED[m]).forEach(rid => {
+      if(!reps[rid]) reps[rid] = {};
+      reps[rid][m] = PLAN_SEED[m][rid].slice();
+    });
+  });
+  enqueue('goals-bulk', { type: 'goals', reps: reps });
 }
 
 function manualSyncGoals() {
@@ -1710,6 +1743,24 @@ function rowToVisit(row, existing){
   };
 }
 
+/* ── 목표 병합: 서버본을 기준으로 삼되 내 슬라이스는 필요 시 로컬 유지 ── */
+function mergeServerGoals(server, protectMine){
+  const merged = (server && typeof server === 'object') ? JSON.parse(JSON.stringify(server)) : {};
+  const myId = String(getCurrentRepId() || '');
+  if(protectMine && myId){
+    // 내가 아직 전송을 못 끝낸 편집본은 서버본보다 우선한다.
+    // goalAddEntry/goalRemoveEntry 는 빈 배열이라도 월 키를 남기므로 삭제도 그대로 반영된다.
+    Object.keys(goals).forEach(m => {
+      const slice = goals[m] && goals[m][myId];
+      if(Array.isArray(slice)){
+        if(!merged[m]) merged[m] = {};
+        merged[m][myId] = slice.slice();
+      }
+    });
+  }
+  return merged;
+}
+
 /* ── 서버 → 로컬 (방문 + 목표) ───────────────────────────── */
 function pullSharedVisits(silent) {
   const url = getSyncUrl();
@@ -1729,10 +1780,12 @@ function pullSharedVisits(silent) {
       const pendIds = pendingVisitIds();
 
       // ── 목표 매장 설정 ─────────────────────────────────
-      // 업로드 대기 중이거나, GET 이후에 로컬에서 목표가 바뀌었으면 덮어쓰지 않는다.
-      if(!_skipGoalPullOnce && !goalsPending() && _goalsChangedAt < startedAt && data.goals
-         && typeof data.goals === 'object' && Object.keys(data.goals).length) {
-        goals = data.goals;                       // 서버가 원본(삭제도 그대로 반영)
+      // 다른 사원 목표는 항상 서버본을 반영하되, 내가 방금 편집해서 아직
+      // 전송이 안 끝난 '내 슬라이스'는 로컬 값을 지켜 되돌아가지 않게 한다.
+      if(!_skipGoalPullOnce && data.goals && typeof data.goals === 'object'
+         && (Object.keys(data.goals).length || goalsPending() || _goalsChangedAt >= startedAt)) {
+        const protectMine = goalsPending() || _goalsChangedAt >= startedAt;
+        goals = mergeServerGoals(data.goals, protectMine);
         saveData();
         renderGoalSettings();
       }
